@@ -907,8 +907,8 @@ function renderDone(){
   <p class="lede">Your auto-marked score is <b>${t.score} / ${t.max}</b>. ${esc(CONFIG.MANUAL_NOTE)}</p>
   <div class="results">${tiles}</div>
   ${CONFIG.NEXT_NOTE ? `<div class="note info">${CONFIG.NEXT_NOTE}</div>` : ""}
-  <div class="field"><span class="hint">Submission receipt. Take a screenshot as proof of submission and send it to the WA group.</span><div class="receipt">${esc(S.name)} · ${esc(S.matric)} · ${esc(S.group)}<br>${stamp.toLocaleString()}<br>Receipt: ${receiptCode(stamp)}</div></div>
-  <div class="dl"><div style="flex:1;min-width:220px"><b>Submit to GitHub</b><div class="hint">Download your answers as a PDF and upload it to the ${esc(CONFIG.SHORT)} folder in GitHub. File name: <span class="mono">${esc(S.matric)}_${esc(CONFIG.FILE_TAG)}.pdf</span></div></div><button class="btn" type="button" id="pdfBtn">Download PDF</button></div>
+  <div class="field"><span class="hint">Submission receipt.</span><div class="receipt">${esc(S.name)} · ${esc(S.matric)} · ${esc(S.group)}<br>${stamp.toLocaleString()}<br>Receipt: ${receiptCode(stamp)}</div></div>
+  <div class="dl"><div style="flex:1;min-width:220px"><b>Download your answer</b><div class="hint">Download your answers as a PDF. File name: <span class="mono">${esc(S.matric)}_${esc(CONFIG.FILE_TAG)}.pdf</span></div></div><button class="btn" type="button" id="pdfBtn">Download PDF</button></div>
   <div id="pdfMsg" class="hint" role="status"></div>
   <div id="doneSync"></div></section>`;
 }
