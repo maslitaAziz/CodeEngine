@@ -1,0 +1,1661 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Code Engine Part 1</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Familjen+Grotesk:wght@500;600;700&family=Source+Sans+3:wght@400;600;700&family=JetBrains+Mono:wght@400;600&display=swap">
+<style>
+:root{color-scheme:light}body{margin:0}img{max-width:100%}[hidden]{display:none!important}
+:root{
+  --bg:#f3f5f8; --paper:#ffffff; --ink:#18212f; --muted:#5b6678; --line:#d6dce5;
+  --accent:#1d4ed8; --accent-ink:#ffffff; --accent-soft:#e3eafc;
+  --ok:#15803d; --ok-soft:#dcfce7; --bad:#b91c1c; --bad-soft:#fee2e2; --warn:#a16207; --warn-soft:#fef3c7;
+  --code-bg:#0f172a; --code-fg:#e2e8f0; --code-num:#64748b; --code-cmt:#86efac; --grid:#e5e9f0;
+  --f-display:"Familjen Grotesk","Segoe UI",system-ui,sans-serif;
+  --f-body:"Source Sans 3","Segoe UI",system-ui,sans-serif;
+  --f-mono:"JetBrains Mono",Consolas,"Courier New",monospace;
+  --r:10px;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#0e1420; --paper:#161e2c; --ink:#e6ebf3; --muted:#9aa6b8; --line:#2a3548;
+  --accent:#7aa2ff; --accent-ink:#0b1220; --accent-soft:#1e2b48;
+  --ok:#4ade80; --ok-soft:#123222; --bad:#f87171; --bad-soft:#3b1717; --warn:#fbbf24; --warn-soft:#3a2c0c;
+  --code-bg:#0a0f1a; --code-fg:#e2e8f0; --code-num:#5b6678; --code-cmt:#86efac; --grid:#222c3d; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#0e1420; --paper:#161e2c; --ink:#e6ebf3; --muted:#9aa6b8; --line:#2a3548;
+  --accent:#7aa2ff; --accent-ink:#0b1220; --accent-soft:#1e2b48;
+  --ok:#4ade80; --ok-soft:#123222; --bad:#f87171; --bad-soft:#3b1717; --warn:#fbbf24; --warn-soft:#3a2c0c;
+  --code-bg:#0a0f1a; --code-fg:#e2e8f0; --code-num:#5b6678; --code-cmt:#86efac; --grid:#222c3d; color-scheme:dark}
+*{box-sizing:border-box;font-variant-ligatures:none;font-feature-settings:"liga" 0,"calt" 0}
+body{background:var(--bg);color:var(--ink);font-family:var(--f-body);font-size:16px;line-height:1.55}
+.bar{position:sticky;top:env(safe-area-inset-top,0px);z-index:20;background:var(--paper);border-bottom:1px solid var(--line)}
+.bar-in{max-width:960px;margin:0 auto;padding:10px 16px;display:flex;flex-wrap:wrap;gap:8px 16px;align-items:center;justify-content:space-between}
+.course{font-family:var(--f-display);font-weight:700;letter-spacing:.01em}
+.course small{display:block;font-family:var(--f-body);font-weight:400;color:var(--muted);font-size:13px}
+.who{display:flex;flex-wrap:wrap;gap:8px;align-items:center;font-size:14px;color:var(--muted)}
+.chip{display:inline-flex;align-items:center;gap:6px;border-radius:999px;padding:3px 10px;font-size:13px;font-weight:600;border:1px solid var(--line);background:var(--bg);color:var(--muted)}
+.chip.ok{background:var(--ok-soft);color:var(--ok);border-color:transparent}
+.chip.warn{background:var(--warn-soft);color:var(--warn);border-color:transparent}
+.chip.info{background:var(--accent-soft);color:var(--accent);border-color:transparent}
+main{max-width:960px;margin:0 auto;padding-inline:16px;padding-block:20px 60px;display:grid;gap:18px}
+h1,h2,h3{font-family:var(--f-display);line-height:1.2;text-wrap:balance;margin:0}
+h1{font-size:clamp(26px,4vw,34px)}
+h2{font-size:24px}
+h3{font-size:17px}
+p{margin:0}
+.sheet{background:var(--paper);border:1px solid var(--line);border-radius:var(--r);padding:22px clamp(16px,3vw,28px);display:grid;gap:16px;min-width:0}
+.lede{color:var(--muted);max-width:68ch}
+.eyebrow{font-size:12px;font-weight:700;letter-spacing:.09em;text-transform:uppercase;color:var(--accent)}
+/* gate */
+.gate{max-width:560px;margin:4vh auto 0;width:100%}
+.field{display:grid;gap:6px}
+.field label{font-weight:600}
+.hint{font-size:13px;color:var(--muted)}
+.err{font-size:13px;color:var(--bad);font-weight:600}
+input[type=text],input[type=number],select,textarea{font:inherit;color:var(--ink);background:var(--paper);border:1px solid var(--line);border-radius:8px;padding:8px 10px;width:100%;min-width:0}
+input.code,textarea.code{font-family:var(--f-mono);font-size:14px}
+input:focus-visible,select:focus-visible,textarea:focus-visible,button:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+input:disabled,select:disabled,textarea:disabled{opacity:.75;cursor:not-allowed}
+.btn{font:inherit;font-weight:700;border-radius:8px;padding:9px 16px;border:1px solid var(--accent);background:var(--accent);color:var(--accent-ink);cursor:pointer}
+.btn.ghost{background:transparent;color:var(--accent)}
+.btn.small{padding:5px 10px;font-size:14px;font-weight:600}
+.btn.danger{border-color:var(--bad);background:var(--bad);color:var(--paper)}
+.btn:disabled{opacity:.45;cursor:not-allowed}
+.row{display:flex;flex-wrap:wrap;gap:10px;align-items:center}
+/* stepper */
+.steps{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:6px;list-style:none;margin:0;padding:0}
+.step button{width:100%;font:inherit;text-align:left;background:var(--paper);border:1px solid var(--line);border-radius:8px;padding:8px 10px;cursor:pointer;color:var(--ink);display:grid;gap:2px;min-height:62px}
+.step .n{font-family:var(--f-mono);font-size:12px;color:var(--muted)}
+.step .t{font-weight:600;font-size:14px;line-height:1.25}
+.step.done button{border-color:var(--ok);background:var(--ok-soft)}
+.step.done .n{color:var(--ok)}
+.step.current button{border-color:var(--accent);box-shadow:inset 0 -3px 0 var(--accent)}
+.step.locked button{color:var(--muted);cursor:not-allowed;background:var(--bg)}
+@media (max-width:640px){.steps{grid-template-columns:repeat(3,minmax(0,1fr))}}
+.ps-tabs{display:flex;flex-wrap:wrap;gap:6px}
+.ps-tab{font:inherit;font-weight:600;border:1px solid var(--line);background:var(--paper);color:var(--ink);border-radius:8px;padding:8px 12px;cursor:pointer;text-align:left;display:grid;gap:1px}
+.ps-tab small{font-weight:400;color:var(--muted);font-size:12.5px}
+.ps-tab[aria-selected=true]{border-color:var(--accent);box-shadow:inset 0 -3px 0 var(--accent)}
+.ps-tab.ok{background:var(--ok-soft)}
+textarea.codebox{min-height:280px;tab-size:4;line-height:1.5;white-space:pre;overflow-x:auto}
+.ipo{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}
+@media (max-width:700px){.ipo{grid-template-columns:1fr}}
+.stepnum{font-family:var(--f-mono);font-size:12px;color:var(--accent);font-weight:600;letter-spacing:.05em}
+.run{margin:0;font-family:var(--f-mono);font-size:13.5px;background:var(--bg);border:1px solid var(--line);border-radius:6px;padding:8px 12px;white-space:pre;overflow-x:auto}
+.dl{display:flex;flex-wrap:wrap;gap:12px;align-items:center;border:1px solid var(--accent);background:var(--accent-soft);border-radius:8px;padding:14px 16px}
+/* tables */
+.tbl-wrap{overflow-x:auto;border:1px solid var(--line);border-radius:8px}
+table{border-collapse:collapse;width:100%;min-width:560px;font-size:15px}
+th,td{padding:8px 10px;border-bottom:1px solid var(--line);text-align:left;vertical-align:middle}
+th{font-size:12px;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);background:var(--bg);font-weight:700}
+tr:last-child td{border-bottom:0}
+td.num{font-family:var(--f-mono);color:var(--muted);width:36px}
+code,.mono{font-family:var(--f-mono);font-size:.92em}
+td code{background:var(--accent-soft);color:var(--ink);padding:2px 6px;border-radius:5px;white-space:nowrap}
+tr.right td{background:var(--ok-soft)}
+tr.wrong td{background:var(--bad-soft)}
+.fb{font-size:13px;font-weight:600}
+.fb.ok{color:var(--ok)} .fb.bad{color:var(--bad)}
+/* code listing */
+.listing{background:var(--code-bg);color:var(--code-fg);border-radius:8px;padding:12px 0;overflow-x:auto;font-family:var(--f-mono);font-size:14px;line-height:1.6}
+.listing div{white-space:pre;padding-inline:14px}
+.listing .ln{color:var(--code-num);display:inline-block;width:2.4em;user-select:none}
+.lesson{display:grid;gap:12px;border:1px solid var(--line);border-radius:var(--r);padding:16px 18px;background:var(--bg);max-width:100%;min-width:0}
+.lesson p,.lesson li{max-width:70ch}
+.lesson .snip{font-size:14px;padding:10px 14px}
+.lesson-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:10px}
+.lesson-grid div{border-left:3px solid var(--accent);padding:2px 12px}
+.lesson-grid b{font-family:var(--f-display)}
+.rules{margin:0;padding-left:20px;display:grid;gap:4px}
+table.mini{min-width:0;width:auto;font-size:15px;border:1px solid var(--line);border-radius:8px}
+table.mini td,table.mini th{padding:6px 12px}
+.snip{margin:0;font-family:var(--f-mono);font-size:13.5px;background:var(--code-bg);color:var(--code-fg);border-radius:6px;padding:6px 10px;white-space:pre;overflow-x:auto}
+.kbd{font-size:14px;color:var(--muted);margin-top:4px}
+.kbd .mono{color:var(--ink);background:var(--warn-soft);padding:1px 6px;border-radius:4px}
+.ask{margin-top:6px;font-weight:600}
+.vars{display:grid;gap:6px}
+.vars .mono{min-width:7.5ch}
+select.code{font-family:var(--f-mono);font-size:14px}
+.recap{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:10px}
+.recap div{border-left:3px solid var(--accent);padding:4px 12px;font-size:15px}
+.recap b{display:block;font-family:var(--f-display)}
+.note{background:var(--warn-soft);color:var(--ink);border-radius:8px;padding:10px 14px;font-size:15px}
+.note.info{background:var(--accent-soft)}
+.note.ok{background:var(--ok-soft)}
+.submit-zone{display:flex;flex-wrap:wrap;gap:12px;align-items:center;justify-content:space-between;border-top:1px dashed var(--line);padding-top:14px}
+.count{font-size:14px;color:var(--muted);font-variant-numeric:tabular-nums}
+.score{font-family:var(--f-display);font-size:22px;font-weight:700}
+/* flowchart */
+.tabs{display:flex;gap:4px;border-bottom:1px solid var(--line)}
+.tab{font:inherit;font-weight:600;background:none;border:0;border-bottom:3px solid transparent;padding:8px 14px;color:var(--muted);cursor:pointer}
+.tab[aria-selected=true]{color:var(--accent);border-bottom-color:var(--accent)}
+.tools{display:flex;flex-wrap:wrap;gap:6px;align-items:center}
+.tool{font:inherit;font-size:14px;font-weight:600;display:inline-flex;align-items:center;gap:6px;padding:6px 10px;border-radius:7px;border:1px solid var(--line);background:var(--paper);color:var(--ink);cursor:pointer}
+.tool svg{width:22px;height:16px}
+.tool[aria-pressed=true]{background:var(--accent);color:var(--accent-ink);border-color:var(--accent)}
+.tool:disabled{opacity:.45;cursor:not-allowed}
+.canvas-wrap{border:1px solid var(--line);border-radius:8px;overflow:auto;background:var(--paper);max-height:72vh}
+#fc{display:block;width:100%;min-width:520px;touch-action:none;user-select:none}
+#fc .gridline{stroke:var(--grid)}
+#fc .shape{fill:var(--paper);stroke:var(--ink);stroke-width:2}
+#fc .shape.term{fill:var(--accent-soft)}
+#fc .node.sel .shape{stroke:var(--accent);stroke-width:3}
+#fc .node.src .shape{stroke:var(--ok);stroke-width:3;stroke-dasharray:6 4}
+#fc text{fill:var(--ink);font-family:var(--f-body);font-size:15px;pointer-events:none}
+#fc .link{stroke:var(--ink);stroke-width:2;fill:none}
+#fc .link.sel{stroke:var(--accent);stroke-width:3}
+#fc .hit{stroke:transparent;stroke-width:14;fill:none;cursor:pointer}
+#fc .node{cursor:grab}
+#fc .arrowhead{fill:var(--ink)}
+#fc .lbl-bg{fill:var(--paper)}
+.label-edit{display:grid;grid-template-columns:auto minmax(0,1fr);gap:8px;align-items:center}
+.drop{border:2px dashed var(--line);border-radius:8px;padding:22px;text-align:center;color:var(--muted);display:grid;gap:10px;justify-items:center}
+.drop.over{border-color:var(--accent);background:var(--accent-soft)}
+.preview-img{max-height:420px;border:1px solid var(--line);border-radius:8px}
+.checklist{display:grid;gap:4px;font-size:15px;list-style:none;padding:0;margin:0}
+.checklist li::before{content:"○ ";color:var(--muted)}
+.checklist li.ok::before{content:"● ";color:var(--ok)}
+.confirm{display:flex;flex-wrap:wrap;gap:8px;align-items:center;background:var(--warn-soft);border-radius:8px;padding:8px 12px;font-size:15px}
+.rating{display:flex;gap:6px;flex-wrap:wrap}
+.rating label{display:inline-flex;align-items:center;gap:4px;border:1px solid var(--line);border-radius:999px;padding:3px 10px;cursor:pointer;font-size:14px}
+.rating input{accent-color:var(--accent)}
+.receipt{font-family:var(--f-mono);font-size:15px;background:var(--bg);border:1px dashed var(--line);border-radius:8px;padding:12px 14px;overflow-x:auto}
+.results{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px}
+.results div{border:1px solid var(--line);border-radius:8px;padding:10px 12px}
+.results span{display:block;font-size:13px;color:var(--muted)}
+.results b{font-family:var(--f-display);font-size:20px;font-variant-numeric:tabular-nums}
+
+/* Code Engine additions */
+.steps{grid-template-columns:repeat(auto-fit,minmax(118px,1fr))}
+@media (max-width:640px){.steps{grid-template-columns:repeat(3,minmax(0,1fr))}}
+.step .m{font-size:12px;color:var(--muted)}
+.meta{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.plan{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:8px;list-style:none;padding:0;margin:0}
+.plan li{border:1px solid var(--line);border-radius:8px;padding:8px 12px;background:var(--bg);font-size:15px;display:grid;gap:2px}
+.plan li span{font-size:13px;color:var(--muted)}
+.ask .lbl{font-weight:400;color:var(--muted)}
+textarea.code{font-family:var(--f-mono);font-size:14px;tab-size:4;white-space:pre;overflow-x:auto}
+.sym{display:grid;grid-template-columns:repeat(auto-fit,minmax(270px,1fr));gap:10px}
+.sym div{display:grid;grid-template-columns:64px 1fr;gap:10px;align-items:center;border:1px solid var(--line);border-radius:8px;padding:8px 10px;background:var(--paper)}
+.sym svg{width:64px;height:40px}
+.sym svg *{fill:var(--paper);stroke:var(--ink);stroke-width:2}
+.sym svg .ln{fill:none}
+.sym b{display:block;font-family:var(--f-display)}
+.sym small{color:var(--muted);font-size:13.5px;line-height:1.35}
+.task-grid{display:grid;grid-template-columns:minmax(0,1fr);gap:12px}
+#fc .shape.sub-line{fill:none}
+.focus{display:grid;gap:4px;margin:0;padding-left:20px}
+/* ---- Learn first ---- */
+.act-head{display:flex;flex-wrap:wrap;gap:10px;align-items:flex-start;justify-content:space-between}
+.learn .lpart{display:grid;gap:10px;border-top:1px dashed var(--line);padding-top:16px}
+.learn .lpart:first-of-type{border-top:0;padding-top:0}
+.idea{display:grid;gap:10px}
+.idea p,.idea li{max-width:72ch}
+.walk{display:grid;gap:10px;border:1px solid var(--line);border-radius:var(--r);padding:14px;background:var(--bg);min-width:0}
+.walk-body{display:grid;gap:12px;min-width:0}
+.walk-body.two{grid-template-columns:minmax(0,1.25fr) minmax(0,1fr);align-items:start}
+.walk-body.two.fcw{grid-template-columns:minmax(0,.85fr) minmax(0,1.3fr)}
+@media (max-width:760px){.walk-body.two{grid-template-columns:minmax(0,1fr)}}
+.walk-code{max-height:420px;overflow:auto}
+.walk-code div{transition:background .2s}
+.walk-code div.on{background:rgba(250,204,21,.22);box-shadow:inset 3px 0 0 #facc15}
+.walk-side{display:grid;gap:10px;align-content:start;min-width:0}
+.walk-panel{background:var(--paper);border:1px solid var(--line);border-radius:8px;padding:10px 12px;display:grid;gap:6px;min-width:0}
+.walk-out{margin:0;font-family:var(--f-mono);font-size:13.5px;white-space:pre-wrap;min-height:2.6em;background:var(--code-bg);color:var(--code-fg);border-radius:6px;padding:8px 10px}
+.walk-out .typed{color:#facc15;font-weight:600}
+.cells{display:flex;flex-wrap:wrap;gap:6px}
+.cell{display:grid;border:1px solid var(--line);border-radius:6px;padding:4px 10px;min-width:64px;transition:background .3s}
+.cell span{font-family:var(--f-mono);font-size:12px;color:var(--muted)}
+.cell b{font-family:var(--f-mono);font-size:16px}
+.cell.chg{background:var(--warn-soft);border-color:var(--warn)}
+.arr{display:grid;gap:4px;margin-top:6px}
+.boxes{display:flex;flex-wrap:wrap;gap:4px}
+.boxes div{display:grid;justify-items:center;border:1px solid var(--line);border-radius:6px;min-width:44px;padding:4px 6px;background:var(--paper)}
+.boxes b{font-family:var(--f-mono)}
+.boxes small{font-family:var(--f-mono);font-size:11px;color:var(--muted)}
+.boxes .hi{background:var(--warn-soft);border-color:var(--warn)}
+table.gridv{min-width:0;width:auto;font-family:var(--f-mono);font-size:14px;border:1px solid var(--line)}
+table.gridv th,table.gridv td{padding:4px 10px;text-align:center}
+table.gridv td.rowon{background:var(--accent-soft)}
+table.gridv td.hi{background:var(--warn-soft);outline:2px solid var(--warn)}
+.walk-note{background:var(--paper);border-left:4px solid var(--accent);border-radius:6px;padding:10px 14px;font-size:15.5px;min-height:2.8em}
+.walk-ctl{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.walk-fcwrap{overflow:auto;max-height:520px}
+.walk-fc{width:100%;min-width:300px;display:block;max-height:none}
+.walk-fc .shape{fill:var(--paper);stroke:var(--ink);stroke-width:2}
+.walk-fc .shape.term{fill:var(--accent-soft)}
+.walk-fc .shape.sub-line{fill:none}
+.walk-fc .hl .shape{stroke:#d97706;stroke-width:3.5}
+.walk-fc text{fill:var(--ink);font-family:var(--f-body);font-size:15px}
+.walk-fc .muted-t{fill:var(--muted)}
+.walk-fc .link{stroke:var(--ink);stroke-width:2;fill:none}
+.walk-fc .arrowhead{fill:var(--ink)}
+.walk-fc .lbl-bg{fill:var(--paper)}
+.tries{display:grid;gap:10px}
+.try{display:grid;gap:8px;border:1px solid var(--line);border-radius:8px;padding:12px 14px;background:var(--paper)}
+.try .ask{margin:0}
+.opts{display:flex;flex-wrap:wrap;gap:6px}
+.opt{font:inherit;font-family:var(--f-mono);font-size:14px;border:1px solid var(--line);background:var(--bg);color:var(--ink);border-radius:8px;padding:6px 12px;cursor:pointer}
+.opt.ok{background:var(--ok-soft);border-color:var(--ok)}
+.opt.bad{background:var(--bad-soft);border-color:var(--bad)}
+.tfb{font-size:14.5px}
+.tfb.ok{color:var(--ok)} .tfb.bad{color:var(--bad)}
+.linkbtn{font:inherit;background:none;border:0;color:var(--accent);text-decoration:underline;cursor:pointer;padding:0 4px}
+.keys{display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:10px}
+.keys div{border-left:3px solid var(--accent);padding:4px 12px;background:var(--paper);border-radius:0 6px 6px 0}
+.keys div > b:first-child{display:block;font-family:var(--f-display)}
+@media (max-width:760px){.walk-body.two.fcw{grid-template-columns:minmax(0,1fr)}}
+.walk-note:empty{display:none}
+
+</style>
+</head><body>
+<header class="bar"><div class="bar-in">
+  <div class="course">Code Launchpad: Code Engine<small>Part 1 · Basic elements, selection, repetition</small></div>
+  <div class="who"><span id="whoName"></span><span id="clockChip" class="chip info" hidden></span><span id="syncChip" class="chip">Not started</span></div>
+</div></header>
+
+<main id="app">
+  <section id="gate" class="sheet gate" aria-labelledby="gateTitle">
+    <div class="eyebrow">Before you start</div>
+    <h1 id="gateTitle">Part 1: Basic Elements, Selection and Repetition</h1>
+    <p class="lede">Seven short topics and a coding challenge, about 75 minutes. Each topic starts with <b>Learn first</b>: a short explanation, a step-by-step walkthrough you can play, and a quick practice that is not marked. Then you do the activity, which is marked. Each activity opens after you submit the one before it, and your answers are recorded under your matric number.</p>
+    <ul class="plan" id="plan" aria-label="Session plan"></ul>
+    <form id="gateForm" class="sheet" style="padding:0;border:0" novalidate>
+      <div class="field">
+        <label for="inName">Full name</label>
+        <input id="inName" type="text" autocomplete="name" placeholder="As in your student ID">
+        <div id="errName" class="err" hidden></div>
+      </div>
+      <div class="field">
+        <label for="inMatric">Matric number</label>
+        <input id="inMatric" type="text" class="code" autocomplete="off" spellcheck="false" placeholder="B032410123">
+        <div class="hint" id="matricHint"></div>
+        <div id="errMatric" class="err" hidden></div>
+      </div>
+      <div class="field">
+        <label for="inGroup">Group</label>
+        <select id="inGroup"></select>
+        <div id="errGroup" class="err" hidden></div>
+      </div>
+      <div class="row"><button class="btn" type="submit" id="startBtn">Start Part 1</button></div>
+      <div id="resumeNote" class="note info" hidden></div>
+    </form>
+  </section>
+
+  <section id="work" hidden>
+    <ol class="steps" id="steps" aria-label="Activities"></ol>
+  </section>
+  <div id="panels" hidden></div>
+</main>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js"></script>
+<script>
+/* =====================================================================
+   Code Launchpad: Code Engine (shared by Part 1 and Part 2).
+   Built on the Lab 3 / Lecture 4 workbook: same gate, stepper, sync
+   queue, Google Sheet payload and PDF receipt.
+   ===================================================================== */
+const $ = (s, el = document) => el.querySelector(s);
+const $$ = (s, el = document) => [...el.querySelectorAll(s)];
+const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+const store = {
+  get(k){ try{ return JSON.parse(localStorage.getItem(k)); }catch(e){ return null; } },
+  set(k,v){ try{ localStorage.setItem(k, JSON.stringify(v)); }catch(e){} }
+};
+const uid = () => Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
+const PRE = c => `<pre class="snip">${esc(c)}</pre>`;
+const kindOf = id => ACTS.find(x => x.id === id).kind;
+
+/* ---------------- Answer checking ---------------- */
+const stripQ = v => String(v ?? "").trim().replace(/^["']|["']$/g, "").replace(/\s+/g, " ");
+const normCode = v => String(v ?? "").trim().replace(/\s+/g, " ");
+const noWS = v => String(v ?? "").replace(/\s+/g, "");
+function numEq(a, b){ if (a == null || String(a).trim() === "") return false; const x = parseFloat(String(a).trim()), y = parseFloat(b); return !isNaN(x) && Math.abs(x - y) < 1e-9 && /^-?\d+(\.\d+)?$/.test(String(a).trim()); }
+/* one blank: exp may be a string or a list of accepted strings. str = text compare, code = compare without spaces, otherwise numeric */
+function blankOk(it, given, exp){
+  const list = Array.isArray(exp) ? exp : [exp];
+  if (it.cmp === "code") return list.some(e => noWS(given) === noWS(e));
+  if (it.str) return list.some(e => stripQ(given) === e);
+  return list.some(e => numEq(given, e));
+}
+const firstExp = e => Array.isArray(e) ? e[0] : e;
+const qOpts = it => it.opts;
+function quizItemOk(A, it){
+  const a = act(A).answers;
+  if (it.k === "mcq") return a[it.q] === String(it.ans);
+  if (it.k === "text") return it.check(normCode(a[it.q]), noWS(a[it.q]));
+  return Object.entries(it.vars).every(([v, exp]) => blankOk(it, a[`${it.q}${v}`], exp));
+}
+function quizExpect(A, it){
+  if (it.k === "mcq") return it.opts[it.ans];
+  if (it.k === "text") return it.expect;
+  return Object.entries(it.vars).map(([v, e]) => `${it.lbl?.[v] || v} = ${firstExp(e)}`).join(", ");
+}
+const quizKeys = A => QUIZ[A].items.flatMap(it => it.k === "vars" ? Object.keys(it.vars).map(v => `${it.q}${v}`) : [it.q]);
+const gradeQuiz = A => QUIZ[A].items.filter(it => quizItemOk(A, it)).length;
+
+/* ---------------- State ---------------- */
+let S = null;
+let CUR = null;
+let FCB = null;
+const key = m => `${CONFIG.LAB_ID}:${m.toUpperCase()}`;
+function save(){ if (S) store.set(key(S.matric), S); }
+function migrate(st){ st.ready = st.ready || {}; st.boards = st.boards || {}; st.uploads = st.uploads || {}; st.fcTabs = st.fcTabs || {}; st.tab = st.tab || {}; st.acts = st.acts || {}; st.queue = st.queue || []; return st; }
+const board = k => (S.boards[k] = S.boards[k] || {nodes:[], links:[]});
+const B = () => board(FCB);
+const rerender = () => goto(CUR);
+function act(id){ return S.acts[id] || (S.acts[id] = {answers:{}, log:[], edits:{}, openedAt:null}); }
+function unlockedIndex(){ let i = 0; while (i < ACTS.length && act(ACTS[i].id).submittedAt) i++; return i; }
+function unlockedIndexFor(st){ let i = 0; while (i < ACTS.length && st.acts?.[ACTS[i].id]?.submittedAt) i++; return i; }
+
+/* ---------------- Sync to Google Sheet ---------------- */
+function setChip(){
+  const c = $("#syncChip");
+  if (!S){ c.className = "chip"; c.textContent = "Not started"; return; }
+  if (!CONFIG.SCRIPT_URL){ c.className = "chip warn"; c.textContent = "Preview mode: answers stay in this browser"; return; }
+  if (S.queue.length){ c.className = "chip warn"; c.textContent = `${S.queue.length} submission${S.queue.length>1?"s":""} waiting to send`; }
+  else { c.className = "chip ok"; c.textContent = "All answers recorded"; }
+}
+function send(event, extra = {}){
+  const p = {eventId: uid(), lab: CONFIG.LAB_ID, labShort: CONFIG.SHORT, labTitle: CONFIG.TITLE,
+             actList: ACTS.map(a => ({id: a.id, title: a.short, max: actMax(a.id)})), event, name: S.name, matric: S.matric, group: S.group,
+             clientTime: new Date().toISOString(), device: navigator.userAgent.slice(0, 120), ...extra};
+  if (!CONFIG.SCRIPT_URL){ setChip(); return; }
+  S.queue.push(p); save(); flush();
+}
+let flushing = false;
+async function flush(){
+  setChip();
+  if (!CONFIG.SCRIPT_URL || flushing || !S.queue.length) return;
+  flushing = true;
+  try{
+    while (S.queue.length){
+      const p = S.queue[0];
+      const r = await fetch(CONFIG.SCRIPT_URL, {method:"POST", body: JSON.stringify(p)});
+      const j = await r.json().catch(() => ({ok:false}));
+      if (!j.ok) throw new Error(j.error || "Server did not confirm");
+      S.queue.shift(); save(); setChip();
+    }
+  }catch(e){ setTimeout(() => { flushing = false; flush(); }, 8000); setChip(); return; }
+  flushing = false; setChip();
+}
+window.addEventListener("online", () => S && flush());
+
+/* ---------------- Session clock ---------------- */
+let clockTimer = null;
+function startClock(){
+  const c = $("#clockChip"); c.hidden = false;
+  const total = ACTS.reduce((n, a) => n + (a.min || 0), 0);
+  const tick = () => { const m = Math.floor((Date.now() - new Date(S.startedAt).getTime()) / 60000);
+    c.textContent = unlockedIndex() >= ACTS.length ? `Finished` : `${m} min of ${total}`; };
+  tick(); clearInterval(clockTimer); clockTimer = setInterval(tick, 30000);
+}
+
+/* ---------------- Gate ---------------- */
+function initGate(){
+  $("#matricHint").textContent = CONFIG.MATRIC_HINT;
+  $("#plan").innerHTML = ACTS.map((a, i) => `<li><b>${i+1}. ${esc(a.short)}</b><span>about ${a.min} min</span></li>`).join("");
+  $("#inGroup").innerHTML = `<option value="">Select your group</option>` + CONFIG.GROUPS.map(x => `<option>${esc(x)}</option>`).join("");
+  const last = store.get(`${CONFIG.LAB_ID}:last`);
+  if (last){
+    const prev = store.get(key(last));
+    if (prev){ $("#inName").value = prev.name; $("#inMatric").value = prev.matric; $("#inGroup").value = prev.group || "";
+      const n = $("#resumeNote"); n.hidden = false; n.textContent = `Welcome back. Your progress on this device is saved; press Start to continue from Activity ${Math.min(unlockedIndexFor(prev)+1, ACTS.length)}.`; }
+  }
+  $("#gateForm").addEventListener("submit", e => {
+    e.preventDefault();
+    const name = $("#inName").value.trim().replace(/\s+/g, " ");
+    const matric = $("#inMatric").value.trim().toUpperCase();
+    const group = $("#inGroup").value.trim();
+    let ok = true;
+    const show = (id, msg) => { const el = $(id); el.hidden = !msg; el.textContent = msg || ""; if (msg) ok = false; };
+    show("#errName", name.length < 3 ? "Enter your full name." : (/^[A-Za-z@'.\-\/ ]+$/.test(name) ? "" : "Use letters only in your name."));
+    show("#errMatric", !matric ? "Enter your matric number." : (new RegExp(CONFIG.MATRIC_PATTERN).test(matric) ? "" : `This does not look like a matric number. ${CONFIG.MATRIC_HINT}.`));
+    show("#errGroup", group ? "" : "Choose your group.");
+    if (!ok){ ($("#gate .err:not([hidden])").previousElementSibling || $("#inName")).focus?.(); return; }
+    const existing = store.get(key(matric));
+    if (existing){ S = migrate(existing); S.name = name; S.group = group; }
+    else { S = migrate({name, matric, group, startedAt: new Date().toISOString()}); }
+    store.set(`${CONFIG.LAB_ID}:last`, matric);
+    save();
+    if (!existing) send("session_start"); else flush();
+    openWorkbook();
+  });
+}
+function openWorkbook(){
+  $("#gate").hidden = true; $("#work").hidden = false; $("#panels").hidden = false;
+  $("#whoName").innerHTML = `<b>${esc(S.name)}</b> · <span class="mono">${esc(S.matric)}</span> · ${esc(S.group)}`;
+  setChip(); startClock();
+  const i = unlockedIndex();
+  goto(i >= ACTS.length ? "done" : ACTS[i].id);
+}
+
+/* ---------------- Stepper & navigation ---------------- */
+function renderSteps(curId){
+  const ui = unlockedIndex();
+  $("#steps").innerHTML = ACTS.map((a, i) => {
+    const done = !!act(a.id).submittedAt, locked = i > ui;
+    const cls = done ? "done" : locked ? "locked" : "";
+    const status = done ? (act(a.id).max ? `${act(a.id).score}/${act(a.id).max}` : "Done") : locked ? "Locked" : (hasLearn(a.id) && !S.ready[a.id] ? "Learn" : "Open");
+    return `<li class="step ${cls} ${a.id===curId?"current":""}"><button type="button" data-go="${a.id}" ${locked?'disabled aria-disabled="true"':""} aria-label="Activity ${i+1}, ${esc(a.title)}, ${status}">
+      <span class="n">${String(i+1).padStart(2,"0")} · ${status}</span><span class="t">${esc(a.short)}</span><span class="m">~${a.min} min</span></button></li>`;
+  }).join("");
+  $$("#steps [data-go]").forEach(b => b.addEventListener("click", () => goto(b.dataset.go)));
+}
+function goto(id, view){
+  CUR = id; stopWalks();
+  renderSteps(id);
+  const P = $("#panels");
+  if (id === "done"){ P.innerHTML = renderDone(); bindDone(); window.scrollTo({top:0}); return; }
+  const mode = view || (hasLearn(id) && !S.ready[id] && !locked(id) ? "learn" : "act");
+  if (mode === "learn"){ P.innerHTML = renderLearn(id); bindLearn(id); window.scrollTo({top:0}); return; }
+  const a = act(id);
+  if (!a.openedAt){ a.openedAt = new Date().toISOString(); save(); }
+  const k = kindOf(id);
+  if (k === "fc") FCB = S.tab[id] || FCT[id].tasks[0].id;
+  P.innerHTML = k === "quiz" ? renderQuiz(id) : k === "code" ? renderCode(id) : k === "fc" ? renderFCAct(id) : renderExit(id);
+  bindActivity(id);
+  window.scrollTo({top:0});
+}
+
+/* ---------------- Learn first (not marked, not sent to the sheet) ---------------- */
+const hasLearn = id => typeof LEARN !== "undefined" && !!LEARN[id];
+let WALK_TIMERS = [];
+function stopWalks(){ WALK_TIMERS.forEach(t => clearInterval(t)); WALK_TIMERS = []; }
+function renderLearn(id){
+  const L = LEARN[id], A = ACTS.find(x => x.id === id), i = ACTS.indexOf(A), back = S.ready[id] || locked(id);
+  let n = 1;
+  const part = (label, body) => `<div class="lpart"><div class="stepnum">${n++} · ${label}</div>${body}</div>`;
+  return `<section class="sheet learn">
+  <div><div class="eyebrow">Activity ${i+1} of ${ACTS.length} · Learn first · not marked</div><h2>${esc(A.title)}</h2></div>
+  ${part("THE IDEA", `<div class="idea">${L.idea}</div>`)}
+  ${(L.walks || []).map((w, j) => part(w.label || "WATCH IT RUN", renderWalk(w, j))).join("")}
+  ${L.tries?.length ? part("TRY IT · NOT MARKED", `<p class="hint" style="margin-bottom:8px">Quick practice. Your answers here are not recorded.</p><div class="tries">${L.tries.map(renderTry).join("")}</div>`) : ""}
+  <div class="submit-zone"><span class="count">${back ? "You can come back to this lesson any time." : "Next: the activity. It is marked and recorded under your matric number."}</span>
+    <button class="btn" type="button" id="startAct">${back ? "Back to the activity" : "I'm ready: start the activity"}</button></div>
+  </section>`;
+}
+function renderWalk(w, j){
+  const hasMem = w.steps.some(s => s.v || s.arr || s.grid), hasOut = w.steps.some(s => s.o || s.i);
+  const code = w.code ? `<div class="listing walk-code">${w.code.split("\n").map((l, k) => `<div data-ln="${k+1}"><span class="ln">${k+1}</span>${esc(l) || " "}</div>`).join("")}</div>` : "";
+  const side = [
+    w.fc ? `<div class="walk-panel walk-fcwrap"><div class="eyebrow">Flowchart</div><svg class="walk-fc" role="img" aria-label="Flowchart being built"></svg></div>` : "",
+    hasMem ? `<div class="walk-panel"><div class="eyebrow">Memory</div><div class="walk-mem"></div></div>` : "",
+    hasOut ? `<div class="walk-panel"><div class="eyebrow">Console</div><pre class="walk-out"></pre></div>` : ""
+  ].join("");
+  return `<div class="walk" data-walk="${j}">
+    ${w.title ? `<h3>${esc(w.title)}</h3>` : ""}${w.sub ? `<p class="hint">${w.sub}</p>` : ""}
+    <div class="walk-body ${code && side ? "two" : ""} ${w.fc ? "fcw" : ""}">${code}${side ? `<div class="walk-side">${side}</div>` : ""}</div>
+    <div class="walk-note" aria-live="polite"></div>
+    <div class="walk-ctl">
+      <button class="btn small ghost" type="button" data-w="first" aria-label="Back to the start">⏮</button>
+      <button class="btn small ghost" type="button" data-w="prev">◀ Back</button>
+      <button class="btn small" type="button" data-w="next">Next step ▶</button>
+      <button class="btn small ghost" type="button" data-w="play">▶ Play</button>
+      <span class="count walk-count"></span>
+    </div></div>`;
+}
+function renderTry(t, j){
+  const ctl = t.k === "mcq"
+    ? `<div class="opts">${t.opts.map((o, k) => `<button class="opt" type="button" data-k="${k}">${esc(o)}</button>`).join("")}</div>`
+    : `<div class="row" style="flex-wrap:nowrap"><input type="text" class="code" placeholder="${esc(t.ph || "Type your answer")}" autocomplete="off" spellcheck="false"><button class="btn small" type="button" data-check>Check</button></div>`;
+  return `<div class="try" data-try="${j}"><div class="ask"><span class="stepnum">Q${j+1}</span> ${t.ask}</div>${t.code ? PRE(t.code) : ""}${ctl}<div class="tfb" aria-live="polite"></div></div>`;
+}
+function walkState(w, upto){
+  const st = {v:{}, arr:{}, grid:{}, out:"", changed:new Set()};
+  for (let k = 0; k <= upto; k++){
+    const s = w.steps[k];
+    if (s.v) Object.entries(s.v).forEach(([a, b]) => { st.v[a] = b; if (k === upto) st.changed.add(a); });
+    if (s.arr) Object.assign(st.arr, s.arr);
+    if (s.grid) Object.assign(st.grid, s.grid);
+    if (s.o) st.out += esc(s.o);
+    if (s.i) st.out += `<span class="typed">${esc(s.i)}</span>\n`;
+  }
+  return st;
+}
+function drawWalkFC(svg, w, s, j){
+  const count = s.fc ?? 0;
+  const nodes = w.fc.nodes.slice(0, count).map((n, k) => ({id: String(k), type: n.type, text: n.text, x: n.x, y: n.y, w: n.w || SHAPES[n.type].w, h: n.h || SHAPES[n.type].h}));
+  const bd = {nodes, links: w.fc.links.filter(([a, b]) => a < count && b < count).map(([a, b, lab, route], k) => ({id: "l"+k, from: String(a), to: String(b), label: lab || "", route}))};
+  const route = l => { if (l.route !== "left") return linkPath(l, bd);
+    const A = nodes[+l.from], T = nodes[+l.to], X = Math.min(A.x, T.x) - 32, ay = A.y + A.h/2, ty = T.y + T.h/2;
+    return {d: `M${A.x},${ay} H${X} V${ty} H${T.x}`, mx: X, my: (ay + ty) / 2}; };
+  const H = Math.max(200, ...nodes.map(n => n.y + n.h + 20)), W = w.fc.width || 480;
+  svg.setAttribute("viewBox", `0 0 ${W} ${H}`);
+  const links = bd.links.map(l => { const p = route(l); if (!p) return "";
+    const lbl = l.label ? `<rect class="lbl-bg" x="${p.mx - l.label.length*4.5 - 6}" y="${p.my - 11}" width="${l.label.length*9 + 12}" height="22" rx="4"/><text x="${p.mx}" y="${p.my + 1}" text-anchor="middle" dominant-baseline="middle">${esc(l.label)}</text>` : "";
+    return `<path class="link" d="${p.d}" marker-end="url(#wah${j})"/>${lbl}`; }).join("");
+  const ns = nodes.map((n, k) => `<g class="${k === (s.fh ?? count - 1) ? "hl" : ""}">${nodePoly(n)}${textSVG(n)}</g>`).join("");
+  svg.innerHTML = `<defs><marker id="wah${j}" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="9" markerHeight="9" orient="auto-start-reverse"><path class="arrowhead" d="M0,0 L10,5 L0,10 z"/></marker></defs>${links}${ns}` +
+    (count ? "" : `<text x="${W/2}" y="100" text-anchor="middle" class="muted-t">Press Next step to start</text>`);
+}
+function showWalk(box, w, k, j){
+  box.dataset.at = k;
+  const s = w.steps[k], st = walkState(w, k);
+  const lines = [].concat(s.l ?? []);
+  $$(".walk-code [data-ln]", box).forEach(d => d.classList.toggle("on", lines.includes(+d.dataset.ln)));
+  const on = $(".walk-code .on", box); if (on){ const c = on.parentElement; const top = on.offsetTop - c.clientHeight / 2; c.scrollTo({top: Math.max(0, top), behavior: "smooth"}); }
+  const mem = $(".walk-mem", box);
+  if (mem){
+    const vars = Object.entries(st.v).map(([a, b]) => `<div class="cell ${st.changed.has(a) ? "chg" : ""}"><span>${esc(a)}</span><b>${esc(b)}</b></div>`).join("");
+    const arrs = Object.entries(st.arr).map(([name, A]) => `<div class="arr"><span class="mono">${esc(name)}</span><div class="boxes">${A.vals.map((x, i) => `<div class="${A.hi === i ? "hi" : ""}"><b>${esc(x)}</b><small>[${i}]</small></div>`).join("")}</div></div>`).join("");
+    const grids = Object.entries(st.grid).map(([name, G]) => `<div class="arr"><span class="mono">${esc(name)}</span><table class="gridv"><tr><th></th>${G.rows[0].map((_, c) => `<th>[${c}]</th>`).join("")}</tr>${G.rows.map((r, ri) => `<tr><th>[${ri}]</th>${r.map((x, c) => `<td class="${G.hi && G.hi[0] === ri && G.hi[1] === c ? "hi" : ""} ${G.row === ri ? "rowon" : ""}">${esc(x)}</td>`).join("")}</tr>`).join("")}</table></div>`).join("");
+    mem.innerHTML = vars || arrs || grids ? `<div class="cells">${vars}</div>${arrs}${grids}` : `<span class="hint">Nothing stored yet.</span>`;
+  }
+  const out = $(".walk-out", box); if (out) out.innerHTML = st.out || `<span class="hint">(empty)</span>`;
+  const fc = $(".walk-fc", box); if (fc) drawWalkFC(fc, w, s, j);
+  $(".walk-note", box).innerHTML = s.n || "";
+  $(".walk-count", box).textContent = `Step ${k + 1} of ${w.steps.length}`;
+  $("[data-w=prev]", box).disabled = k === 0; $("[data-w=first]", box).disabled = k === 0;
+  $("[data-w=next]", box).disabled = k === w.steps.length - 1;
+}
+function bindLearn(id){
+  const L = LEARN[id];
+  $$("#panels .walk").forEach(box => {
+    const j = +box.dataset.walk, w = L.walks[j];
+    let timer = null;
+    const play = $("[data-w=play]", box);
+    const stop = () => { clearInterval(timer); timer = null; play.textContent = "▶ Play"; };
+    const go = k => showWalk(box, w, Math.max(0, Math.min(w.steps.length - 1, k)), j);
+    $("[data-w=first]", box).addEventListener("click", () => { stop(); go(0); });
+    $("[data-w=prev]", box).addEventListener("click", () => { stop(); go(+box.dataset.at - 1); });
+    $("[data-w=next]", box).addEventListener("click", () => { stop(); go(+box.dataset.at + 1); });
+    play.addEventListener("click", () => {
+      if (timer){ stop(); return; }
+      if (+box.dataset.at >= w.steps.length - 1) go(0);
+      play.textContent = "❚❚ Pause";
+      timer = setInterval(() => { const k = +box.dataset.at + 1; if (k >= w.steps.length){ stop(); return; } go(k); }, w.speed || 1800);
+      WALK_TIMERS.push(timer);
+    });
+    go(0);
+  });
+  $$("#panels .try").forEach(box => {
+    const t = L.tries[+box.dataset.try], fb = $(".tfb", box);
+    const say = (ok, extra = "") => { fb.className = "tfb " + (ok ? "ok" : "bad");
+      fb.innerHTML = ok ? `<b>Correct.</b> ${t.why || ""}` : `<b>Not yet.</b> ${t.hint || "Look at the example again and try once more."} <button class="linkbtn" type="button">Show answer</button>${extra}`;
+      $(".linkbtn", fb)?.addEventListener("click", () => { fb.className = "tfb"; fb.innerHTML = `<b>Answer:</b> ${esc(t.k === "mcq" ? t.opts[t.ans] : [].concat(t.accept)[0])}. ${t.why || ""}`; }); };
+    if (t.k === "mcq") $$(".opt", box).forEach(b => b.addEventListener("click", () => {
+      const ok = +b.dataset.k === t.ans;
+      $$(".opt", box).forEach(x => x.classList.remove("ok", "bad")); b.classList.add(ok ? "ok" : "bad"); say(ok);
+    }));
+    else {
+      const inp = $("input", box);
+      const check = () => { if (!inp.value.trim()) return;
+        const acc = [].concat(t.accept), v = inp.value;
+        const ok = acc.some(a => t.cmp === "num" ? numEq(v, a) : t.cmp === "code" ? noWS(v) === noWS(a) : stripQ(v).toLowerCase() === String(a).toLowerCase());
+        say(ok); };
+      $("[data-check]", box).addEventListener("click", check);
+      inp.addEventListener("keydown", e => { if (e.key === "Enter") check(); });
+    }
+  });
+  $("#startAct").addEventListener("click", () => { S.ready[id] = true; save(); goto(id, "act"); });
+}
+
+/* ---------------- Rendering helpers ---------------- */
+const locked = id => !!act(id).submittedAt;
+const dis = id => locked(id) ? "disabled" : "";
+const val = (id, q) => act(id).answers[q] ?? "";
+function sel(id, q, opts, placeholder){
+  const v = val(id, q);
+  return `<select class="code" data-q="${q}" id="${id}-${q}" ${dis(id)}><option value="">${placeholder}</option>${opts.map(([k, t]) => `<option value="${esc(k)}" ${v===k?"selected":""}>${esc(t)}</option>`).join("")}</select>`;
+}
+function txt(id, q, ph = "", cls = "code"){
+  return `<input type="text" data-q="${q}" id="${id}-${q}" class="${cls}" value="${esc(val(id, q))}" placeholder="${esc(ph)}" ${dis(id)} autocomplete="off" spellcheck="false">`;
+}
+function area(id, q, rows, ph = "", cls = "code"){
+  return `<textarea data-q="${q}" id="${id}-${q}" rows="${rows}" class="${cls}" placeholder="${esc(ph)}" ${dis(id)} spellcheck="false">${esc(val(id, q))}</textarea>`;
+}
+function header(id, lede){
+  const a = ACTS.find(x => x.id === id);
+  const rev = hasLearn(id) ? `<button class="btn ghost small" type="button" data-learn="${id}">↺ Review the lesson</button>` : "";
+  return `<div class="act-head"><div><div class="eyebrow">Activity ${ACTS.indexOf(a) + 1} of ${ACTS.length} · about ${a.min} min</div><h2>${esc(a.title)}</h2></div>${rev}</div><p class="lede">${lede}</p>`;
+}
+function submitZone(id, extraNote = ""){
+  const a = act(id);
+  if (a.submittedAt){
+    const sc = a.max ? `<span class="score">${a.score} / ${a.max}</span>` : `<span class="score">Submitted</span>`;
+    const nextIdx = ACTS.findIndex(x => x.id === id) + 1;
+    const next = nextIdx < ACTS.length ? `<button class="btn" type="button" data-go="${ACTS[nextIdx].id}">Go to Activity ${nextIdx+1}</button>` : `<button class="btn" type="button" data-go="done">See my results</button>`;
+    return `<div class="submit-zone"><div class="row">${sc}<span class="count">Submitted ${new Date(a.submittedAt).toLocaleTimeString([], {hour:"2-digit", minute:"2-digit"})}${extraNote}</span></div>${next}</div>`;
+  }
+  return `<div class="submit-zone"><span class="count" id="${id}-count"></span><div class="row" id="${id}-actions"><button class="btn" type="button" id="${id}-submit">Submit Activity</button></div></div>`;
+}
+
+/* ---------------- Quiz activity (lesson + questions) ---------------- */
+function renderQuiz(A){
+  const Q = QUIZ[A], done = locked(A);
+  const rows = Q.items.map((it, i) => {
+    const codeBlock = it.code ? PRE(it.code) : "";
+    const ask = it.ask ? `<div class="ask">${esc(it.ask)}</div>` : "";
+    let ctl;
+    if (it.k === "mcq") ctl = sel(A, it.q, it.opts.map((o, j) => [String(j), o]), "Choose…");
+    else if (it.k === "text") ctl = it.ml ? area(A, it.q, it.ml, it.ph || "") : txt(A, it.q, it.ph || "");
+    else ctl = `<div class="vars">${Object.keys(it.vars).map(v => `<label class="row" style="gap:6px;flex-wrap:nowrap"><span class="mono" style="white-space:nowrap">${esc(it.lbl?.[v] || v)} =</span>${txt(A, `${it.q}${v}`, it.ph || "")}</label>`).join("")}</div>`;
+    const ok = done && quizItemOk(A, it);
+    const fb = done ? `<span class="fb ${ok?"ok":"bad"}">${ok?"Correct":"Answer: "+esc(quizExpect(A, it))}</span>${it.why?`<div class="hint">${esc(it.why)}</div>`:""}` : "";
+    return `<tr class="${done?(ok?"right":"wrong"):""}"><td class="num">${i+1}</td><td>${codeBlock}${ask}</td><td style="min-width:230px">${ctl}</td>${done?`<td style="min-width:170px">${fb}</td>`:""}</tr>`;
+  }).join("");
+  return `<section class="sheet">${header(A, Q.lede)}
+  <div class="lesson">${Q.lesson}</div>
+  ${Q.note ? `<div class="note info">${Q.note}</div>` : ""}
+  <div class="tbl-wrap"><table><thead><tr><th>#</th><th>${Q.colQ || "Question"}</th><th>Your answer</th>${done?"<th>Feedback</th>":""}</tr></thead><tbody>${rows}</tbody></table></div>
+  ${submitZone(A)}</section>`;
+}
+function quizValue(A, it){
+  const a = act(A).answers;
+  if (it.k === "mcq") return a[it.q] != null && a[it.q] !== "" ? it.opts[+a[it.q]] : "";
+  if (it.k === "text") return a[it.q] || "";
+  return Object.keys(it.vars).map(x => `${it.lbl?.[x] || x} = ${a[`${it.q}${x}`] ?? ""}`).join(", ");
+}
+function quizReadable(A){
+  const out = {};
+  QUIZ[A].items.forEach((it, i) => {
+    const label = `${i+1}. ${(it.code || "").replace(/\s+/g, " ")} ${it.ask || ""}`.trim().slice(0, 140);
+    out[label] = `${quizValue(A, it)}${quizItemOk(A, it) ? " ✓" : " ✗"}`;
+  });
+  return out;
+}
+
+/* ---------------- Coding challenge activity ---------------- */
+const stripComments = c => String(c || "").replace(/\/\*[\s\S]*?\*\//g, " ").replace(/\/\/[^\n]*/g, " ");
+function codeChecks(id){
+  const C = CODE[id], a = act(id).answers, c = stripComments(a.code), out = String(a.run || "").replace(/\s+/g, " ");
+  const list = C.checks.map(([t, f]) => ({t, ok: !!c.trim() && f(c)}));
+  C.output.forEach(([t, re]) => list.push({t, ok: re.test(out), out: true}));
+  return list;
+}
+const codeMax = id => CODE[id].checks.length + CODE[id].output.length;
+function renderCode(id){
+  const C = CODE[id], done = locked(id);
+  return `<section class="sheet">${header(id, C.lede)}
+  <div class="note info"><b>Problem: ${esc(C.title)}.</b> ${C.problem}</div>
+  <div class="field"><span class="hint">Sample run (user input after the colon)</span><pre class="run">${esc(C.run)}</pre></div>
+  ${C.tips ? `<div class="lesson">${C.tips}</div>` : ""}
+  <p class="lede" style="font-size:15px">Write the program in Visual Studio, run it with the <b>sample input</b> above, then paste your code and the console output here.</p>
+  <div class="field"><label for="${id}-code">C++ code</label>${area(id, "code", 20, C.starter, "code codebox")}</div>
+  <div class="field"><label for="${id}-run">Program output (copy from the console window)</label>${area(id, "run", 7, "Paste the output of your program here")}</div>
+  <div><h3 style="margin-bottom:6px">Automatic code checks</h3><ul class="checklist" id="codeCheck">${codeChecks(id).map(c => `<li class="${c.ok?"ok":""}">${esc(c.t)}</li>`).join("")}</ul>
+  <p class="hint" style="margin-top:6px">These checks look for the required parts and test your output. Your lecturer still reads the code for correct logic.</p></div>
+  ${submitZone(id, done ? " · code checks auto-marked; logic checked by your lecturer" : "")}</section>`;
+}
+
+/* ---------------- Flowchart topic ---------------- */
+const FC_RULE = `<div class="note">Flowchart rule: do <b>not</b> draw variable declarations such as <code>int n;</code>. Show only what the algorithm does: input, calculations, decisions and output. A starting value may appear in a process box when the algorithm uses it, e.g. <code>sum = 0</code>.</div>`;
+function renderFCAct(id){
+  const F = FCT[id], done = locked(id), cur = FCB, T = F.tasks.find(x => x.id === cur);
+  const tabs = F.tasks.map((x, i) => `<button class="ps-tab ${taskHasWork(x.id)?"ok":""}" type="button" role="tab" data-fct="${x.id}" aria-selected="${x.id===cur}">Flowchart ${i+1}${taskHasWork(x.id)?" ✓":""}<small>${esc(x.title)}</small></button>`).join("");
+  return `<section class="sheet">${header(id, F.lede)}
+  <div class="lesson">${F.lesson}</div>
+  <div class="ps-tabs" role="tablist" aria-label="Flowcharts">${tabs}</div>
+  <div class="note info"><b>Flowchart ${F.tasks.indexOf(T)+1}: ${esc(T.title)}.</b> ${T.text}</div>
+  <div class="listing" role="region" aria-label="Program to convert">${T.code.split("\n").map((l, i) => `<div><span class="ln">${i+1}</span>${esc(l)}</div>`).join("")}</div>
+  ${FC_RULE}
+  ${flowchartPane(cur, done)}
+  ${submitZone(id, done ? " · structure checks auto-marked; flow and labels marked by your lecturer" : "")}</section>`;
+}
+const taskOf = k => { for (const id in FCT){ const t = FCT[id].tasks.find(x => x.id === k); if (t) return t; } return null; };
+const taskHasWork = k => board(k).nodes.length > 0 || !!S.uploads[k];
+function flowchartPane(k, done){
+  const tab = S.fcTabs[k] || "draw", up = S.uploads[k];
+  return `<div class="tabs" role="tablist">
+    <button class="tab" role="tab" aria-selected="${tab==="draw"}" data-tab="draw">Draw here</button>
+    <button class="tab" role="tab" aria-selected="${tab==="upload"}" data-tab="upload">Upload a photo${up?" ✓":""}</button>
+  </div>
+  <div id="paneDraw" ${tab==="draw"?"":"hidden"}>
+    ${done ? "" : `<div class="tools" role="toolbar" aria-label="Flowchart tools" style="margin-bottom:10px">
+      <button class="tool" type="button" data-add="term"><svg viewBox="0 0 22 16"><rect x="1" y="3" width="20" height="10" rx="5" fill="none" stroke="currentColor" stroke-width="1.6"/></svg>Start / End</button>
+      <button class="tool" type="button" data-add="io"><svg viewBox="0 0 22 16"><polygon points="5,3 21,3 17,13 1,13" fill="none" stroke="currentColor" stroke-width="1.6"/></svg>Input / Output</button>
+      <button class="tool" type="button" data-add="proc"><svg viewBox="0 0 22 16"><rect x="1" y="3" width="20" height="10" fill="none" stroke="currentColor" stroke-width="1.6"/></svg>Process</button>
+      <button class="tool" type="button" data-add="dec"><svg viewBox="0 0 22 16"><polygon points="11,1 21,8 11,15 1,8" fill="none" stroke="currentColor" stroke-width="1.6"/></svg>Decision</button>
+      <button class="tool" type="button" data-add="sub"><svg viewBox="0 0 22 16"><rect x="1" y="3" width="20" height="10" fill="none" stroke="currentColor" stroke-width="1.6"/><path d="M4.5 3v10M17.5 3v10" stroke="currentColor" stroke-width="1.6"/></svg>Function call</button>
+      <button class="tool" type="button" id="toolConnect" aria-pressed="false"><svg viewBox="0 0 22 16"><path d="M2 8h15M13 4l5 4-5 4" fill="none" stroke="currentColor" stroke-width="1.6"/></svg>Connect arrow</button>
+      <button class="tool" type="button" id="toolDelete" disabled>Delete selected</button>
+      <button class="tool" type="button" id="toolClear">Clear all</button>
+    </div>
+    <div class="label-edit" style="margin-bottom:10px"><label for="fcLabel" class="hint">Text in selected shape</label><input id="fcLabel" type="text" placeholder="Select a shape or arrow, then type here" disabled></div>
+    <div id="clearConfirm" class="confirm" hidden>Remove every shape and arrow on this flowchart? <button class="btn small danger" type="button" id="clearYes">Clear all</button><button class="btn small ghost" type="button" id="clearNo">Keep</button></div>
+    <p class="hint" id="fcHint" style="margin-bottom:8px">Add shapes, drag to arrange, then use <b>Connect arrow</b>: tap the first shape, then the next. Select an arrow out of a decision to label it Yes or No.</p>`}
+    <div class="canvas-wrap"><svg id="fc" viewBox="0 0 720 900" role="img" aria-label="Your flowchart"></svg></div>
+  </div>
+  <div id="paneUp" ${tab==="upload"?"":"hidden"}>
+    <div class="drop" id="drop">
+      ${up ? `<img class="preview-img" src="${up}" alt="Your uploaded flowchart">` : `<p>Take a clear, well-lit photo of your flowchart on paper.</p>`}
+      ${done ? "" : `<div class="row"><label class="btn ghost small" for="upFile" style="cursor:pointer">${up?"Replace photo":"Choose photo"}</label>${up?`<button class="btn small ghost" type="button" id="upRemove">Remove</button>`:""}</div>
+      <input type="file" id="upFile" accept="image/*" hidden><p class="hint">JPG or PNG. Large photos are resized automatically.</p>`}
+    </div>
+  </div>
+  <div><h3 style="margin-bottom:6px">Flowchart checklist</h3><ul class="checklist" id="fcCheck"></ul></div>`;
+}
+/* structure checks for one flowchart board */
+function hasCycle(bd){
+  const adj = {}; bd.links.forEach(l => (adj[l.from] = adj[l.from] || []).push(l.to));
+  const st = {};
+  const dfs = u => { st[u] = 1; for (const v of adj[u] || []){ if (st[v] === 1) return true; if (!st[v] && dfs(v)) return true; } st[u] = 2; return false; };
+  return bd.nodes.some(n => !st[n.id] && dfs(n.id));
+}
+const YES = /^(yes|y|true|t|ya)$/i, NO = /^(no|n|false|f|tidak)$/i;
+function fcChecks(k){
+  const bd = board(k), n = bd.nodes, T = taskOf(k), need = T.need;
+  const cnt = t => n.filter(x => x.type === t).length;
+  const txtOf = x => x.text.trim();
+  const linked = n.length > 0 && n.every(x => bd.links.some(l => l.from === x.id || l.to === x.id));
+  const labelled = n.length > 0 && n.every(x => txtOf(x) && (x.type === "term" || txtOf(x) !== SHAPES[x.type].text));
+  const decs = n.filter(x => x.type === "dec");
+  const decOK = decs.length > 0 && decs.every(d => { const out = bd.links.filter(l => l.from === d.id); return out.length >= 2 && out.some(l => YES.test((l.label||"").trim())) && out.some(l => NO.test((l.label||"").trim())); });
+  const list = [{t: need.term > 2 ? `Has ${need.term} terminators (Start / End for main, and for the function)` : "Has a Start and an End terminator", ok: cnt("term") >= need.term}];
+  if (need.io) list.push({t: `Has at least ${need.io} input / output symbols (parallelograms)`, ok: cnt("io") >= need.io});
+  if (need.proc) list.push({t: `Has at least ${need.proc} process box${need.proc>1?"es":""}`, ok: cnt("proc") >= need.proc});
+  if (need.dec) list.push({t: `Has at least ${need.dec} decision symbol${need.dec>1?"s":""} (diamonds)`, ok: decs.length >= need.dec});
+  if (need.dec) list.push({t: "Every decision has two arrows out, labelled Yes and No", ok: decOK});
+  if (need.loop) list.push({t: "Has a loop: an arrow goes back to the decision", ok: hasCycle(bd)});
+  if (need.sub) list.push({t: "Calls the function with a Function call (predefined process) symbol", ok: cnt("sub") >= need.sub});
+  if (need.fnName) list.push({t: `A terminator starts the function flowchart (e.g. ${need.fnName}(…))`, ok: n.some(x => x.type === "term" && x.text.includes(need.fnName))});
+  if (need.ret) list.push({t: "A terminator ends the function flowchart with Return", ok: n.some(x => x.type === "term" && /return/i.test(x.text))});
+  list.push({t: "Every shape is connected by an arrow", ok: linked});
+  list.push({t: "Every shape has your own text", ok: labelled});
+  return list;
+}
+const fcTaskMax = k => fcChecks(k).length;
+function gradeFC(id){ return FCT[id].tasks.reduce((s, t) => s + (board(t.id).nodes.length ? fcChecks(t.id).filter(c => c.ok).length : 0), 0); }
+function renderChecklist(){
+  const ul = $("#fcCheck"); if (!ul) return;
+  ul.innerHTML = fcChecks(FCB).map(c => `<li class="${c.ok?"ok":""}">${esc(c.t)}</li>`).join("") + (S.uploads[FCB] ? `<li class="ok">Photo uploaded (your lecturer marks photo flowcharts)</li>` : "");
+}
+
+/* ---------------- Exit ticket ---------------- */
+function renderExit(id){
+  const E = EXIT[id], done = locked(id);
+  const rows = E.topics.map((t, i) => {
+    const q = `c${i+1}`, v = val(id, q);
+    const opts = [1,2,3,4,5].map(n => `<label><input type="radio" name="${id}-${q}" data-q="${q}" value="${n}" ${String(v)===String(n)?"checked":""} ${dis(id)}>${n}</label>`).join("");
+    return `<tr><td>${esc(t)}</td><td><div class="rating" role="radiogroup" aria-label="${esc(t)}">${opts}</div></td></tr>`;
+  }).join("");
+  return `<section class="sheet">${header(id, "Rate how confident you feel about each topic, from 1 (lost) to 5 (I can code it without help). Your lecturer uses this to plan the next class.")}
+  <div class="tbl-wrap"><table><thead><tr><th>Topic</th><th>Confidence</th></tr></thead><tbody>${rows}</tbody></table></div>
+  <div class="field"><label for="${id}-unsure">What is one thing you are still unsure about?</label>${area(id, "unsure", 3, E.unsurePh, "")}</div>
+  <div class="field"><label for="${id}-learned">What is one thing you learned today?</label>${area(id, "learned", 2, "", "")}</div>
+  ${submitZone(id)}</section>`;
+}
+
+/* ---------------- Completion rules & grading ---------------- */
+function progress(id){
+  const k = kindOf(id), a = act(id);
+  if (k === "fc"){
+    const left = FCT[id].tasks.filter(t => !taskHasWork(t.id)).map(t => "Flowchart " + (FCT[id].tasks.indexOf(t) + 1));
+    const n = FCT[id].tasks.length;
+    return {done: n - left.length, total: n, ready: !left.length, msg: left.length ? `Still to draw or upload: ${left.join(", ")}.` : `All ${n} flowcharts have work. Check each checklist, then submit.`};
+  }
+  if (k === "code"){
+    const ready = !!String(a.answers.code || "").trim() && !!String(a.answers.run || "").trim();
+    return {ready, msg: ready ? `${codeChecks(id).filter(c => c.ok).length} of ${codeMax(id)} checks passed. You may keep improving, then submit.` : "Paste your code and your program output to submit."};
+  }
+  const keys = k === "quiz" ? quizKeys(id) : [...EXIT[id].topics.map((_, i) => `c${i+1}`), "unsure"];
+  const done = keys.filter(q => String(a.answers[q] ?? "").trim() !== "").length;
+  return {done, total: keys.length, ready: done === keys.length};
+}
+function actMax(id){
+  const k = kindOf(id);
+  if (k === "quiz") return QUIZ[id].items.length;
+  if (k === "code") return codeMax(id);
+  if (k === "fc") return FCT[id].tasks.reduce((s, t) => s + fcTaskMaxStatic(t), 0);
+  return null;
+}
+/* max for a task without needing state: count the checks fcChecks would list */
+function fcTaskMaxStatic(t){ const n = t.need; return 1 + !!n.io + !!n.proc + (n.dec ? 2 : 0) + !!n.loop + !!n.sub + !!n.fnName + !!n.ret + 2; }
+function totalScore(){ let s = 0, m = 0; ACTS.forEach(x => { const a = act(x.id); if (a.max){ s += a.score; m += a.max; } }); return {score: s, max: m}; }
+
+/* ---------------- Binding & tracking ---------------- */
+function bindActivity(id){
+  $$("#panels [data-go]").forEach(b => b.addEventListener("click", () => goto(b.dataset.go)));
+  $$("#panels [data-learn]").forEach(b => b.addEventListener("click", () => goto(b.dataset.learn, "learn")));
+  const k = kindOf(id);
+  if (k === "fc"){
+    $$("#panels [data-fct]").forEach(t => t.addEventListener("click", () => { S.tab[id] = t.dataset.fct; save(); goto(id); }));
+    bindFlowchart();
+  }
+  if (locked(id)) return;
+  const a = act(id);
+  const t0 = new Date(a.openedAt).getTime();
+  $$(`#panels [data-q]`).forEach(el => {
+    const q = el.dataset.q;
+    const record = () => {
+      const v = el.type === "radio" ? (el.checked ? el.value : a.answers[q]) : el.value;
+      a.logged = a.logged || {};
+      if (a.logged[q] === v) return;
+      const prevHad = a.logged[q] != null && a.logged[q] !== "";
+      a.logged[q] = v; a.answers[q] = v;
+      if (prevHad) a.edits[q] = (a.edits[q] || 0) + 1;
+      if (a.log.length < 400) a.log.push({q, v: String(v).slice(0, 200), t: Math.round((Date.now() - t0) / 1000)});
+      save(); updateCount(id);
+    };
+    el.addEventListener("change", record);
+    if (el.tagName !== "SELECT" && el.type !== "radio"){
+      el.addEventListener("input", () => { a.answers[q] = el.value; save(); updateCount(id); });
+      el.addEventListener("blur", record);
+    }
+  });
+  $$("#panels textarea.code").forEach(t => t.addEventListener("keydown", e => {
+    if (e.key !== "Tab" || e.shiftKey) return;
+    e.preventDefault(); const st = t.selectionStart, en = t.selectionEnd;
+    t.value = t.value.slice(0, st) + "    " + t.value.slice(en); t.selectionStart = t.selectionEnd = st + 4;
+    t.dispatchEvent(new Event("input"));
+  }));
+  $(`#${id}-submit`)?.addEventListener("click", () => askConfirm(id));
+  updateCount(id);
+}
+function updateCount(id){
+  if (!id || id === "done") return;
+  const k = kindOf(id);
+  if (k === "fc") renderChecklist();
+  const p = progress(id), c = $(`#${id}-count`), b = $(`#${id}-submit`);
+  if (!c) return;
+  if (k === "fc"){ c.textContent = p.msg; $$("#panels [data-fct]").forEach(t => t.classList.toggle("ok", taskHasWork(t.dataset.fct))); }
+  else if (k === "code"){ c.textContent = p.msg; const cc = $("#codeCheck"); if (cc) cc.innerHTML = codeChecks(id).map(x => `<li class="${x.ok?"ok":""}">${esc(x.t)}</li>`).join(""); }
+  else c.textContent = `${p.done} of ${p.total} answered${p.ready ? "" : " · answer everything to submit"}`;
+  b.disabled = !p.ready;
+}
+function askConfirm(id){
+  const box = $(`#${id}-actions`);
+  box.innerHTML = `<div class="confirm" role="alert">You cannot change your answers after submitting. <button class="btn small" type="button" id="${id}-yes">Submit now</button><button class="btn small ghost" type="button" id="${id}-no">Keep working</button></div>`;
+  $(`#${id}-yes`).focus();
+  $(`#${id}-no`).addEventListener("click", () => { box.innerHTML = `<button class="btn" type="button" id="${id}-submit">Submit Activity</button>`; $(`#${id}-submit`).addEventListener("click", () => askConfirm(id)); updateCount(id); });
+  $(`#${id}-yes`).addEventListener("click", () => submitActivity(id));
+}
+async function submitActivity(id){
+  const a = act(id), k = kindOf(id);
+  if (!progress(id).ready) return;
+  if (k === "quiz"){ a.score = gradeQuiz(id); a.max = actMax(id); }
+  else if (k === "code"){ a.score = codeChecks(id).filter(c => c.ok).length; a.max = actMax(id); }
+  else if (k === "fc"){ a.score = gradeFC(id); a.max = actMax(id); }
+  a.submittedAt = new Date().toISOString();
+  const timeSpentSec = Math.round((Date.now() - new Date(a.openedAt).getTime()) / 1000);
+  const extra = {activity: id, activityTitle: ACTS.find(x => x.id === id).title, answers: readableAnswers(id), score: a.score ?? "", max: a.max ?? "",
+                 timeSpentSec, editsTotal: Object.values(a.edits).reduce((s, n) => s + n, 0), inputLog: a.log};
+  if (k === "fc"){
+    extra.images = {}; extra.flowchartShapes = {};
+    for (const t of FCT[id].tasks){
+      extra.flowchartShapes[t.id] = board(t.id);
+      if (board(t.id).nodes.length) extra.images[t.id + "_drawing"] = await exportPNG(t.id);
+      if (S.uploads[t.id]) extra.images[t.id + "_photo"] = S.uploads[t.id];
+    }
+  }
+  save();
+  send("activity_submit", extra);
+  if (unlockedIndex() >= ACTS.length){ const t = totalScore(); send("lab_finished", {totalScore: t.score, totalMax: t.max}); }
+  goto(id);
+}
+function readableAnswers(id){
+  const k = kindOf(id), a = act(id).answers, out = {};
+  if (k === "quiz") return quizReadable(id);
+  if (k === "code"){ out["C++ code"] = a.code || ""; out["Program output"] = a.run || "";
+    const ck = codeChecks(id); out["Code checks"] = `${ck.filter(c => c.ok).length}/${ck.length} — missing: ${ck.filter(c => !c.ok).map(c => c.t).join("; ") || "none"}`; }
+  else if (k === "fc") FCT[id].tasks.forEach((t, i) => { const ck = fcChecks(t.id), bd = board(t.id);
+    out[`Flowchart ${i+1}: ${t.title}`] = `${bd.nodes.length} shapes, ${bd.links.length} arrows${S.uploads[t.id] ? ", photo uploaded" : ""}; checks ${bd.nodes.length ? ck.filter(c => c.ok).length : 0}/${ck.length}; missing: ${bd.nodes.length ? (ck.filter(c => !c.ok).map(c => c.t).join("; ") || "none") : "not drawn here"}`;
+    out[`Flowchart ${i+1} text`] = bd.nodes.map(n => `[${n.type}] ${n.text}`).join(" | "); });
+  else { EXIT[id].topics.forEach((t, i) => out[t] = a[`c${i+1}`] || ""); out["Still unsure"] = a.unsure || ""; out["Learned"] = a.learned || ""; }
+  return out;
+}
+
+/* ---------------- Done screen ---------------- */
+const receiptCode = stamp => `${S.matric}-${stamp.toISOString().slice(0,16).replace(/[-:T]/g,"")}-${hash(S.matric + JSON.stringify(S.acts)).slice(0,6)}`;
+const lastStamp = () => new Date(act(ACTS[ACTS.length-1].id).submittedAt || Date.now());
+function renderDone(){
+  const t = totalScore(), stamp = lastStamp();
+  const tiles = ACTS.map((x, i) => { const a = act(x.id); return `<div><span>${i+1}. ${esc(x.short)}</span><b>${a.max ? `${a.score} / ${a.max}` : (a.submittedAt ? "Submitted" : "Not yet")}</b></div>`; }).join("");
+  return `<section class="sheet"><div class="eyebrow">${esc(CONFIG.SHORT)} complete</div><h2>Well done, ${esc(S.name.split(" ")[0])}</h2>
+  <p class="lede">Your auto-marked score is <b>${t.score} / ${t.max}</b>. ${esc(CONFIG.MANUAL_NOTE)}</p>
+  <div class="results">${tiles}</div>
+  ${CONFIG.NEXT_NOTE ? `<div class="note info">${CONFIG.NEXT_NOTE}</div>` : ""}
+  <div class="field"><span class="hint">Submission receipt. Take a screenshot as proof of submission and send it to the WA group.</span><div class="receipt">${esc(S.name)} · ${esc(S.matric)} · ${esc(S.group)}<br>${stamp.toLocaleString()}<br>Receipt: ${receiptCode(stamp)}</div></div>
+  <div class="dl"><div style="flex:1;min-width:220px"><b>Submit to GitHub</b><div class="hint">Download your answers as a PDF and upload it to the ${esc(CONFIG.SHORT)} folder in GitHub. File name: <span class="mono">${esc(S.matric)}_${esc(CONFIG.FILE_TAG)}.pdf</span></div></div><button class="btn" type="button" id="pdfBtn">Download PDF</button></div>
+  <div id="pdfMsg" class="hint" role="status"></div>
+  <div id="doneSync"></div></section>`;
+}
+function bindDone(){
+  $("#pdfBtn")?.addEventListener("click", makePDF);
+  const el = $("#doneSync"); if (CONFIG.SCRIPT_URL && S.queue.length) el.innerHTML = `<div class="note">Some answers have not reached your lecturer yet. Keep this page open with internet on; it retries automatically.</div>`;
+}
+
+/* ---------------- PDF for GitHub ---------------- */
+const pdfTxt = v => String(v ?? "").replace(/[✓✗]/g, "").replace(/→/g, "->").replace(/…/g, "...").replace(/[‘’]/g, "'").replace(/[“”]/g, '"').replace(/[–—]/g, "-").replace(/[^\x09\x0A\x0D\x20-\xFF]/g, "?");
+async function makePDF(){
+  const msg = $("#pdfMsg"), btn = $("#pdfBtn");
+  if (!window.jspdf || !window.jspdf.jsPDF){ msg.textContent = "The PDF tool could not load. Check your internet connection and reload the page; your answers are kept."; return; }
+  btn.disabled = true; msg.textContent = "Preparing your PDF…";
+  try{
+    const { jsPDF } = window.jspdf, doc = new jsPDF({unit: "mm", format: "a4"});
+    const W = 210, M = 15, CW = W - 2 * M, PH = 297;
+    let y = M;
+    const need = h => { if (y + h > PH - M){ doc.addPage(); y = M; } };
+    const line = (t, size = 10, style = "normal", color = [24, 33, 47]) => {
+      doc.setFont("helvetica", style); doc.setFontSize(size); doc.setTextColor(...color);
+      doc.splitTextToSize(pdfTxt(t), CW).forEach(pt => { need(size * 0.45); doc.text(pt, M, y); y += size * 0.45; });
+    };
+    const mono = (title, txt) => { need(16); line(title, 10, "bold");
+      doc.setFont("courier", "normal"); doc.setFontSize(9); doc.setTextColor(24, 33, 47);
+      pdfTxt(txt).replace(/\t/g, "    ").split("\n").forEach(l => doc.splitTextToSize(l || " ", CW).forEach(pt => { need(4.2); doc.text(pt, M, y); y += 4.2; }));
+      y += 2; };
+    const checkTable = (title, ck) => { doc.autoTable({startY: y, margin: {left: M, right: M}, styles: {fontSize: 8.5, cellPadding: 1.4}, headStyles: {fillColor: [227, 234, 252], textColor: [24, 33, 47]},
+      head: [[title, "Result"]], body: ck.map(c => [pdfTxt(c.t), c.ok ? "Passed" : "Not found"]),
+      didParseCell: d => { if (d.section === "body" && d.column.index === 1) d.cell.styles.textColor = d.cell.raw === "Passed" ? [21, 128, 61] : [185, 28, 28]; }});
+      y = doc.lastAutoTable.finalY + 3; };
+    const t = totalScore(), stamp = lastStamp(), receipt = receiptCode(stamp);
+    line("Code Launchpad: Code Engine", 9, "normal", [91, 102, 120]);
+    line(CONFIG.TITLE, 18, "bold"); y += 2;
+    doc.autoTable({startY: y, theme: "plain", margin: {left: M, right: M}, styles: {fontSize: 10, cellPadding: 1.2}, columnStyles: {0: {fontStyle: "bold", cellWidth: 38}},
+      body: [["Name", pdfTxt(S.name)], ["Matric number", S.matric], ["Group", pdfTxt(S.group)], ["Started", new Date(S.startedAt).toLocaleString()],
+             ["Completed", stamp.toLocaleString()], ["Auto-marked score", `${t.score} / ${t.max}`], ["Receipt", receipt]]});
+    y = doc.lastAutoTable.finalY + 4;
+    for (const [i, A] of ACTS.entries()){
+      const a = act(A.id), k = A.kind;
+      need(18); y += 5;
+      line(`${i+1}. ${A.title}${a.max ? `   (${a.score} / ${a.max})` : ""}`, 13, "bold", [29, 78, 216]); y += 1;
+      if (k === "code"){ mono("C++ code", a.answers.code); mono("Program output", a.answers.run); const ck = codeChecks(A.id); checkTable(`Automatic code checks (${ck.filter(c => c.ok).length} / ${ck.length})`, ck); continue; }
+      if (k === "fc"){
+        for (const [j, T] of FCT[A.id].tasks.entries()){
+          need(12); y += 2; line(`Flowchart ${j+1}: ${T.title}`, 11, "bold");
+          const imgs = [];
+          if (board(T.id).nodes.length){ imgs.push(["Drawn in the page", await exportPNG(T.id)]); checkTable("Structure checks", fcChecks(T.id)); }
+          if (S.uploads[T.id]) imgs.push(["Photo", S.uploads[T.id]]);
+          for (const [cap, src] of imgs){
+            if (!src) continue;
+            const dim = await new Promise(r => { const im = new Image(); im.onload = () => r([im.width, im.height]); im.onerror = () => r(null); im.src = src; });
+            if (!dim) continue;
+            let w = CW, h = w * dim[1] / dim[0];
+            const maxH = PH - 2 * M - 10; if (h > maxH){ h = maxH; w = h * dim[0] / dim[1]; }
+            need(h + 8); line(cap, 9, "italic", [91, 102, 120]);
+            doc.addImage(src, src.startsWith("data:image/png") ? "PNG" : "JPEG", M, y, w, h); y += h + 4;
+          }
+        }
+        continue;
+      }
+      let body;
+      if (k === "quiz") body = QUIZ[A.id].items.map((it, n) => [String(n+1), [it.code, it.ask].filter(Boolean).join("\n"), quizValue(A.id, it), quizItemOk(A.id, it) ? "Correct" : "Answer: " + quizExpect(A.id, it)]);
+      else body = [...EXIT[A.id].topics.map((tp, n) => [String(n+1), tp, `Confidence ${a.answers[`c${n+1}`] || "-"} / 5`, ""]), ["", "Still unsure about", a.answers.unsure || "", ""], ["", "Learned today", a.answers.learned || "", ""]];
+      doc.autoTable({startY: y, margin: {left: M, right: M}, styles: {fontSize: 9, cellPadding: 1.8, valign: "top"}, headStyles: {fillColor: [227, 234, 252], textColor: [24, 33, 47]},
+        columnStyles: {0: {cellWidth: 8}, 1: {cellWidth: 70, font: "courier"}, 3: {cellWidth: 42}},
+        head: [["#", "Question", "Your answer", k === "quiz" ? "Result" : ""]], body: body.map(r => r.map(pdfTxt)),
+        didParseCell: d => { if (d.section === "body" && d.column.index === 3) d.cell.styles.textColor = String(d.cell.raw).startsWith("Correct") ? [21, 128, 61] : [185, 28, 28]; }});
+      y = doc.lastAutoTable.finalY + 2;
+    }
+    const pages = doc.getNumberOfPages();
+    for (let n = 1; n <= pages; n++){ doc.setPage(n); doc.setFont("helvetica", "normal"); doc.setFontSize(8); doc.setTextColor(120, 130, 145);
+      doc.text(`${S.matric} | ${pdfTxt(S.name)} | Receipt ${receipt}`, M, PH - 8); doc.text(`Page ${n} of ${pages}`, W - M, PH - 8, {align: "right"}); }
+    doc.save(`${S.matric}_${CONFIG.FILE_TAG}.pdf`);
+    msg.textContent = `PDF downloaded. Upload it to the ${CONFIG.SHORT} folder in GitHub. If nothing downloaded, open this page in Chrome or Edge rather than inside Teams, then try again.`;
+    send("pdf_downloaded");
+  }catch(e){ msg.textContent = "The PDF could not be created: " + e.message; }
+  btn.disabled = false;
+}
+function hash(s){ let h = 2166136261; for (let i = 0; i < s.length; i++){ h ^= s.charCodeAt(i); h = Math.imul(h, 16777619); } return (h >>> 0).toString(36).toUpperCase(); }
+
+/* ---------------- Flowchart editor ---------------- */
+const SHAPES = {term:{w:160,h:50,text:"Start"}, io:{w:200,h:56,text:"Input"}, proc:{w:200,h:56,text:"Process"}, dec:{w:180,h:96,text:"Condition?"}, sub:{w:210,h:56,text:"Function call"}};
+let FC = {sel:null, selLink:null, connect:false, src:null, drag:null};
+function nodePoly(n){
+  const {x, y, w, h} = n;
+  if (n.type === "io"){ const k = 16; return `<polygon class="shape" points="${x+k},${y} ${x+w},${y} ${x+w-k},${y+h} ${x},${y+h}"/>`; }
+  if (n.type === "dec") return `<polygon class="shape" points="${x+w/2},${y} ${x+w},${y+h/2} ${x+w/2},${y+h} ${x},${y+h/2}"/>`;
+  if (n.type === "term") return `<rect class="shape term" x="${x}" y="${y}" width="${w}" height="${h}" rx="${h/2}"/>`;
+  if (n.type === "sub") return `<rect class="shape" x="${x}" y="${y}" width="${w}" height="${h}"/><path class="shape sub-line" style="fill:none" d="M${x+14},${y} V${y+h} M${x+w-14},${y} V${y+h}"/>`;
+  return `<rect class="shape" x="${x}" y="${y}" width="${w}" height="${h}"/>`;
+}
+function wrapText(s, max){
+  const words = String(s).split(/\s+/), lines = []; let cur = "";
+  words.forEach(w => { if ((cur + " " + w).trim().length > max && cur){ lines.push(cur); cur = w; } else cur = (cur + " " + w).trim(); });
+  if (cur) lines.push(cur); return lines.slice(0, 4);
+}
+function textSVG(n){
+  const max = n.type === "dec" ? 14 : n.type === "sub" ? 19 : 22, lines = wrapText(n.text, max), lh = 17, y0 = n.y + n.h/2 - (lines.length - 1) * lh / 2;
+  return `<text text-anchor="middle" dominant-baseline="middle">${lines.map((l, i) => `<tspan x="${n.x + n.w/2}" y="${y0 + i*lh}">${esc(l)}</tspan>`).join("")}</text>`;
+}
+function anchor(n, toward){
+  const cx = n.x + n.w/2, cy = n.y + n.h/2, dx = toward.x - cx, dy = toward.y - cy;
+  if (Math.abs(dy) * n.w >= Math.abs(dx) * n.h) return dy > 0 ? {x: cx, y: n.y + n.h, side: "v"} : {x: cx, y: n.y, side: "v"};
+  return dx > 0 ? {x: n.x + n.w, y: cy, side: "h"} : {x: n.x, y: cy, side: "h"};
+}
+function linkPath(l, bd = B()){
+  const a = bd.nodes.find(n => n.id === l.from), b = bd.nodes.find(n => n.id === l.to);
+  if (!a || !b) return null;
+  const s = anchor(a, {x: b.x + b.w/2, y: b.y + b.h/2}), t = anchor(b, {x: a.x + a.w/2, y: a.y + a.h/2});
+  let d;
+  if (s.side === "v" && t.side === "v"){ const my = (s.y + t.y) / 2; d = `M${s.x},${s.y} V${my} H${t.x} V${t.y}`; }
+  else if (s.side === "h" && t.side === "h"){ const mx = (s.x + t.x) / 2; d = `M${s.x},${s.y} H${mx} V${t.y} H${t.x}`; }
+  else if (s.side === "v"){ d = `M${s.x},${s.y} V${t.y} H${t.x}`; }
+  else { d = `M${s.x},${s.y} H${t.x} V${t.y}`; }
+  return {d, mx: (s.x + t.x) / 2, my: (s.y + t.y) / 2};
+}
+function fcHeight(bd = B()){ return Math.max(900, ...bd.nodes.map(n => n.y + n.h + 120)); }
+function renderFC(){
+  const svg = $("#fc"); if (!svg) return;
+  const H = fcHeight(); svg.setAttribute("viewBox", `0 0 720 ${H}`);
+  let grid = ""; for (let gx = 40; gx < 720; gx += 40) grid += `<line class="gridline" x1="${gx}" y1="0" x2="${gx}" y2="${H}"/>`; for (let gy = 40; gy < H; gy += 40) grid += `<line class="gridline" x1="0" y1="${gy}" x2="720" y2="${gy}"/>`;
+  const links = B().links.map(l => { const p = linkPath(l); if (!p) return "";
+    const lbl = l.label ? `<rect class="lbl-bg" x="${p.mx - l.label.length*4.5 - 6}" y="${p.my - 11}" width="${l.label.length*9 + 12}" height="22" rx="4"/><text x="${p.mx}" y="${p.my + 1}" text-anchor="middle" dominant-baseline="middle">${esc(l.label)}</text>` : "";
+    return `<g data-link="${l.id}"><path class="hit" d="${p.d}"/><path class="link ${FC.selLink===l.id?"sel":""}" d="${p.d}" marker-end="url(#ah)"/>${lbl}</g>`; }).join("");
+  const nodes = B().nodes.map(n => `<g class="node ${FC.sel===n.id?"sel":""} ${FC.src===n.id?"src":""}" data-node="${n.id}">${nodePoly(n)}${textSVG(n)}</g>`).join("");
+  const empty = B().nodes.length ? "" : `<text x="360" y="120" text-anchor="middle" style="fill:var(--muted)">This flowchart is empty. Add a Start / End shape to begin.</text>`;
+  svg.innerHTML = `<defs><marker id="ah" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="9" markerHeight="9" orient="auto-start-reverse"><path class="arrowhead" d="M0,0 L10,5 L0,10 z"/></marker></defs>${grid}${links}${nodes}${empty}`;
+  const lab = $("#fcLabel"), del = $("#toolDelete");
+  if (lab){
+    const n = B().nodes.find(x => x.id === FC.sel), l = B().links.find(x => x.id === FC.selLink);
+    lab.disabled = !(n || l);
+    lab.placeholder = l ? "Arrow label, e.g. Yes or No" : "Select a shape or arrow, then type here";
+    if (document.activeElement !== lab) lab.value = n ? n.text : l ? (l.label || "") : "";
+    del.disabled = !(n || l);
+  }
+  updateCount(CUR);
+}
+function svgPoint(e){ const svg = $("#fc"), pt = svg.createSVGPoint(); pt.x = e.clientX; pt.y = e.clientY; return pt.matrixTransform(svg.getScreenCTM().inverse()); }
+function fcLog(what){ const a = act(CUR); if (a.log.length < 400) a.log.push({q: "flowchart " + FCB, v: what, t: Math.round((Date.now() - new Date(a.openedAt).getTime()) / 1000)}); }
+function bindFlowchart(){
+  if (FC.board !== FCB) FC = {sel:null, selLink:null, connect:false, src:null, drag:null, board:FCB};
+  FC.connect = false; FC.src = null;
+  $$("#panels [data-tab]").forEach(b => b.addEventListener("click", () => { S.fcTabs[FCB] = b.dataset.tab; save(); rerender(); }));
+  renderFC();
+  bindUpload();
+  if (locked(CUR)) return;
+  const svg = $("#fc");
+  $$("#panels [data-add]").forEach(b => b.addEventListener("click", () => {
+    const t = b.dataset.add, d = SHAPES[t];
+    const bottom = B().nodes.length ? Math.max(...B().nodes.map(n => n.y + n.h)) : 0;
+    const terms = B().nodes.filter(n => n.type === "term").length;
+    const n = {id: uid(), type: t, w: d.w, h: d.h, x: Math.round((360 - d.w/2) / 10) * 10, y: Math.round((bottom + (bottom ? 50 : 40)) / 10) * 10, text: t === "term" && terms % 2 === 1 ? "End" : d.text};
+    B().nodes.push(n); FC.sel = n.id; FC.selLink = null; fcLog(`add ${t}`); save(); renderFC();
+    const lab = $("#fcLabel"); lab.focus(); lab.select();
+  }));
+  const conn = $("#toolConnect");
+  conn.addEventListener("click", () => { FC.connect = !FC.connect; FC.src = null; conn.setAttribute("aria-pressed", FC.connect);
+    $("#fcHint").innerHTML = FC.connect ? "<b>Connect mode:</b> tap the shape the arrow starts from, then the shape it points to. Tap <b>Connect arrow</b> again to finish." : "Add shapes, drag to arrange, then use <b>Connect arrow</b>: tap the first shape, then the next. Select an arrow out of a decision to label it Yes or No."; renderFC(); });
+  $("#toolDelete").addEventListener("click", deleteSelected);
+  $("#toolClear").addEventListener("click", () => { $("#clearConfirm").hidden = false; });
+  $("#clearNo").addEventListener("click", () => { $("#clearConfirm").hidden = true; });
+  $("#clearYes").addEventListener("click", () => { S.boards[FCB] = {nodes: [], links: []}; FC.sel = FC.selLink = FC.src = null; $("#clearConfirm").hidden = true; fcLog("clear all"); save(); renderFC(); });
+  $("#fcLabel").addEventListener("input", e => {
+    const n = B().nodes.find(x => x.id === FC.sel), l = B().links.find(x => x.id === FC.selLink);
+    if (n) n.text = e.target.value.slice(0, 80); else if (l) l.label = e.target.value.slice(0, 12);
+    save(); renderFC();
+  });
+  $("#fcLabel").addEventListener("change", e => fcLog(`text: ${e.target.value.slice(0, 60)}`));
+  svg.addEventListener("pointerdown", e => {
+    const g = e.target.closest("[data-node]"), lg = e.target.closest("[data-link]");
+    if (g){
+      const id = g.dataset.node;
+      if (FC.connect){
+        if (!FC.src){ FC.src = id; }
+        else if (FC.src !== id){
+          if (!B().links.some(l => l.from === FC.src && l.to === id)){ B().links.push({id: uid(), from: FC.src, to: id, label: ""}); fcLog("connect"); }
+          FC.src = id; save();
+        }
+        renderFC(); return;
+      }
+      FC.sel = id; FC.selLink = null;
+      const n = B().nodes.find(x => x.id === id), p = svgPoint(e);
+      FC.drag = {id, dx: p.x - n.x, dy: p.y - n.y, moved: false};
+      svg.setPointerCapture(e.pointerId); renderFC(); return;
+    }
+    if (lg && !FC.connect){ FC.selLink = lg.dataset.link; FC.sel = null; renderFC(); $("#fcLabel")?.focus(); return; }
+    FC.sel = FC.selLink = null; if (FC.connect) FC.src = null; renderFC();
+  });
+  svg.addEventListener("pointermove", e => {
+    if (!FC.drag) return;
+    const n = B().nodes.find(x => x.id === FC.drag.id), p = svgPoint(e);
+    n.x = Math.max(0, Math.min(720 - n.w, Math.round((p.x - FC.drag.dx) / 10) * 10));
+    n.y = Math.max(0, Math.round((p.y - FC.drag.dy) / 10) * 10);
+    FC.drag.moved = true; renderFC();
+  });
+  const end = () => { if (FC.drag?.moved){ fcLog("move"); save(); } FC.drag = null; };
+  svg.addEventListener("pointerup", end); svg.addEventListener("pointercancel", end);
+  if (!window.__fcKeys){ window.__fcKeys = true; document.addEventListener("keydown", e => {
+    if (!$("#fc") || locked(CUR)) return;
+    if ((e.key === "Delete" || e.key === "Backspace") && document.activeElement === document.body) deleteSelected();
+    if (e.key === "Escape" && FC.connect) $("#toolConnect")?.click();
+  }); }
+}
+function deleteSelected(){
+  if (FC.sel){ B().links = B().links.filter(l => l.from !== FC.sel && l.to !== FC.sel); B().nodes = B().nodes.filter(n => n.id !== FC.sel); fcLog("delete shape"); }
+  else if (FC.selLink){ B().links = B().links.filter(l => l.id !== FC.selLink); fcLog("delete arrow"); }
+  FC.sel = FC.selLink = null; save(); renderFC();
+}
+function exportPNG(k = FCB){
+  const bd = board(k), H = fcHeight(bd), ink = "#111827";
+  const nodes = bd.nodes.map(n => nodePoly(n).replace(/class="shape term"/g, `fill="#e3eafc" stroke="${ink}" stroke-width="2"`).replace(/class="shape sub-line"/g, `stroke="${ink}" stroke-width="2"`).replace(/class="shape"/g, `fill="#ffffff" stroke="${ink}" stroke-width="2"`) + textSVG(n).replace("<text ", `<text fill="${ink}" font-family="Arial, sans-serif" font-size="15" `)).join("");
+  const links = bd.links.map(l => { const p = linkPath(l, bd); if (!p) return "";
+    const lbl = l.label ? `<rect x="${p.mx - l.label.length*4.5 - 6}" y="${p.my - 11}" width="${l.label.length*9 + 12}" height="22" fill="#ffffff"/><text x="${p.mx}" y="${p.my + 1}" text-anchor="middle" dominant-baseline="middle" fill="${ink}" font-family="Arial, sans-serif" font-size="14">${esc(l.label)}</text>` : "";
+    return `<path d="${p.d}" stroke="${ink}" stroke-width="2" fill="none" marker-end="url(#ah)"/>${lbl}`; }).join("");
+  const head = `<text x="16" y="26" fill="#475569" font-family="Arial, sans-serif" font-size="13">${esc(S.name)} · ${esc(S.matric)} · ${esc(S.group)} · ${esc(taskOf(k)?.title || "")}</text>`;
+  const src = `<svg xmlns="http://www.w3.org/2000/svg" width="720" height="${H}" viewBox="0 0 720 ${H}"><rect width="720" height="${H}" fill="#ffffff"/><defs><marker id="ah" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="9" markerHeight="9" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="${ink}"/></marker></defs>${head}${links}${nodes}</svg>`;
+  return new Promise(res => {
+    const img = new Image();
+    img.onload = () => { const c = document.createElement("canvas"); c.width = 720; c.height = H; const ctx = c.getContext("2d"); ctx.drawImage(img, 0, 0); try{ res(c.toDataURL("image/png")); }catch(e){ res(""); } };
+    img.onerror = () => res("");
+    img.src = "data:image/svg+xml;charset=utf-8," + encodeURIComponent(src);
+  });
+}
+function bindUpload(){
+  const f = $("#upFile"), drop = $("#drop");
+  if (!f) return;
+  const take = file => {
+    if (!file || !file.type.startsWith("image/")) return;
+    const r = new FileReader();
+    r.onload = () => { const img = new Image(); img.onload = () => {
+      const m = 1400, k = Math.min(1, m / Math.max(img.width, img.height)), c = document.createElement("canvas");
+      c.width = Math.round(img.width * k); c.height = Math.round(img.height * k); c.getContext("2d").drawImage(img, 0, 0, c.width, c.height);
+      S.uploads[FCB] = c.toDataURL("image/jpeg", 0.8); fcLog("upload photo"); save(); rerender(); };
+      img.src = r.result; };
+    r.readAsDataURL(file);
+  };
+  f.addEventListener("change", () => take(f.files[0]));
+  drop.addEventListener("dragover", e => { e.preventDefault(); drop.classList.add("over"); });
+  drop.addEventListener("dragleave", () => drop.classList.remove("over"));
+  drop.addEventListener("drop", e => { e.preventDefault(); drop.classList.remove("over"); take(e.dataTransfer.files[0]); });
+  $("#upRemove")?.addEventListener("click", () => { delete S.uploads[FCB]; fcLog("remove photo"); save(); rerender(); });
+}
+
+</script>
+<script>
+/* ============ CONFIG: edit these before hosting ============ */
+const CONFIG = {
+  // Paste your Google Apps Script web app URL (ends with /exec). Leave empty for preview mode.
+  SCRIPT_URL: "",
+  LAB_ID: "CODEENGINE-P1",
+  TITLE: "Code Engine Part 1: Basic Elements, Selection and Repetition",
+  SHORT: "Code Engine Part 1",
+  FILE_TAG: "CodeEngine_Part1",
+  MANUAL_NOTE: "Your lecturer also reads your coding challenge for correct logic.",
+  NEXT_NOTE: "Next: <b>Code Engine Part 2</b> covers functions, arrays and flowcharts. After both parts you will be tested by writing C++ code from a problem statement.",
+  MATRIC_PATTERN: "^[A-Za-z][0-9]{9}$",
+  MATRIC_HINT: "One letter followed by 9 digits, e.g. B032410123",
+  // Groups shown in the Group list on the first page.
+  GROUPS: ["Group 1", "Group 2", "Group 3", "Group 4", "Group 5", "Group 6", "Group 7"]
+};
+/* =========================================================== */
+
+const ACTS = [
+  {id:"BE",   kind:"quiz", min:7,  title:"Basic elements: structure, identifiers, data types, constants", short:"Basic elements"},
+  {id:"OP",   kind:"quiz", min:8,  title:"Operators and expressions", short:"Operators"},
+  {id:"IO",   kind:"quiz", min:8,  title:"Input and output formatting", short:"Input / output"},
+  {id:"SEL",  kind:"quiz", min:9,  title:"Selection: if, if…else, if…else if", short:"if / else if"},
+  {id:"SW",   kind:"quiz", min:7,  title:"Selection: switch, ?: and nested if", short:"switch / nested"},
+  {id:"WH",   kind:"quiz", min:9,  title:"Repetition: while and do…while", short:"while / do…while"},
+  {id:"FOR",  kind:"quiz", min:9, title:"Repetition: for, nested loops, break and continue", short:"for loops"},
+  {id:"CH",   kind:"code", min:15, title:"Coding challenge: marks analyser", short:"Coding challenge"},
+  {id:"EXIT", kind:"exit", min:3,  title:"Exit ticket", short:"Exit ticket"}
+];
+const TF = ["true (1)", "false (0)"];
+
+const QUIZ = {
+  BE: {
+    lede: "Every C++ program is built from the same parts. Get these right and the compiler stops complaining.",
+    lesson: `${PRE('#include <iostream>        // preprocessor directive\nusing namespace std;\n\nconst double RATE = 0.06;  // named constant: cannot change\n\nint main()                 // execution starts here\n{\n    int qty = 3;           // declaration + initialisation\n    double price = 4.50;\n    cout << qty * price * (1 + RATE);\n    return 0;\n}')}
+    <div class="lesson-grid">
+      <div><b>Identifiers</b><p>Start with a letter or <code>_</code>; only letters, digits and <code>_</code>; not a keyword; case-sensitive.</p></div>
+      <div><b>Data types</b><p><code>int</code> whole numbers, <code>double</code>/<code>float</code> decimals, <code>char</code> one character in <code>' '</code>, <code>bool</code> true/false, <code>string</code> text in <code>" "</code>.</p></div>
+      <div><b>Constants</b><p><code>const type NAME = value;</code> must be given a value and can never be changed.</p></div>
+    </div>`,
+    items: [
+      {k:"mcq", q:"b2", ask:"Which is a valid identifier?", opts:["2total","total-marks","_total2","float"], ans:2, why:"2total starts with a digit, total-marks has a minus sign, float is a keyword."},
+      {k:"mcq", q:"b4", code:'char grade = "A";', ask:"What is wrong?", opts:["A char needs single quotes: 'A'","grade is a keyword","A char cannot hold letters","Nothing is wrong"], ans:0},
+      {k:"mcq", q:"b5", code:"const int MAX = 10;\nMAX = 20;", ask:"What happens?", opts:["Compile error: a constant cannot be changed","MAX becomes 20","MAX stays 10 with a warning","Runtime error"], ans:0},
+      {k:"text", q:"b6", ask:"Declare a constant named RATE of type double with the value 0.06.", ph:"const ...", check: v => /^(const\s+double|double\s+const)\s+RATE\s*=\s*0?\.06\s*;$/.test(v), expect:"const double RATE = 0.06;"}
+    ]
+  },
+  OP: {
+    lede: "Most wrong answers in tests come from integer division, % and precedence. Work each one out on paper first.",
+    lesson: `<div class="lesson-grid">
+      <div><b>Integer division</b><p><code>int / int</code> drops the decimal: <code>7 / 2</code> is <code>3</code>. Make one side a double to keep it: <code>7 / 2.0</code> is <code>3.5</code>.</p></div>
+      <div><b>Modulus %</b><p>Remainder of integer division: <code>17 % 5</code> is <code>2</code>. Use it to test even/odd (<code>n % 2 == 0</code>) or to split digits.</p></div>
+      <div><b>Type casting</b><p><code>(double)a / b</code> converts <code>a</code> first, so the division keeps decimals.</p></div>
+      <div><b>Precedence</b><p><code>()</code> → <code>++ --</code> → <code>* / %</code> → <code>+ -</code> → assignment <code>= += -= *= /=</code>.</p></div>
+    </div>
+    ${PRE('x++   // use x, then add 1        ++x   // add 1, then use x\nsum += mark;      // same as sum = sum + mark;')}`,
+    note: "For questions 1 to 4, assume <code>int a = 17, b = 5;</code> at the start of <b>every</b> question.",
+    colQ: "Expression",
+    items: [
+      {k:"vars", q:"o3", code:"a / 2.0", vars:{"Value":"8.5"}},
+      {k:"vars", q:"o4", code:"(double)a / b", vars:{"Value":"3.4"}},
+      {k:"vars", q:"o5", code:"a + b * 2", vars:{"Value":"27"}, why:"* is done before +: 5 * 2 = 10, then 17 + 10."},
+      {k:"vars", q:"o6", code:"int c = a++ + 1;", vars:{c:"18", a:"18"}, why:"a++ uses 17 first, then a becomes 18."},
+      {k:"mcq", q:"o8", code:"int n = 7 / 2 * 2.0;", ask:"What value does n hold?", opts:["7","6","7.0","3"], ans:1, why:"7 / 2 is 3 (integer division), 3 * 2.0 is 6.0, stored in an int as 6."}
+    ]
+  },
+  IO: {
+    lede: "Reading input correctly and printing it in the required format is worth marks in every coding question.",
+    lesson: `${PRE('#include <iomanip>   // needed for setprecision, setw\n#include <string>\n\ncin >> age;                 // reads up to the next space\ncin.ignore();               // throw away the Enter left by cin >>\ngetline(cin, name);         // reads a whole line, spaces included\n\ncout << fixed << setprecision(2) << total;   // 2 decimal places\ncout << setw(6) << qty;                      // right-aligned in 6 columns')}
+    <ul class="rules"><li><code>cin &gt;&gt;</code> stops at a space, so it cannot read "Ali bin Abu". Use <code>getline</code>.</li>
+    <li>After <code>cin &gt;&gt;</code>, call <code>cin.ignore()</code> before <code>getline</code>, or getline reads an empty line.</li>
+    <li><code>fixed</code> + <code>setprecision(n)</code> gives exactly n decimal places.</li></ul>`,
+    colQ: "Question",
+    items: [
+      {k:"mcq", q:"i1", ask:"Which statement reads a full name with spaces into string name?", opts:["cin >> name;","getline(cin, name);","cin.get(name);","cout << name;"], ans:1},
+      {k:"mcq", q:"i2", code:"cin >> age;\ngetline(cin, name);", ask:"name is always empty. How do you fix it?", opts:["Add cin.ignore(); before getline","Use cin >> name; instead","Declare name as char","Swap the two lines"], ans:0, why:"cin >> leaves the Enter key in the input; getline reads it as an empty line."},
+      {k:"vars", q:"i4", code:"double p = 12.5;\ncout << fixed << setprecision(2) << p;", vars:{"Output":"12.50"}, str:true},
+      {k:"mcq", q:"i6", code:"cout << setw(5) << 42;", ask:"What is displayed?", opts:["3 spaces then 42 (5 columns, right-aligned)","42 then 3 spaces","00042","42"], ans:0},
+      {k:"text", q:"i7", ask:"Write one cout statement that displays the value of total with exactly 2 decimal places.", ph:"cout << ...", check: (v, s) => /^cout<<("[^"]*"<<)?(fixed<<setprecision\(2\)|setprecision\(2\)<<fixed)<<total(<<endl|<<"\\n")?;$/.test(s), expect:"cout << fixed << setprecision(2) << total;"}
+    ]
+  },
+  SEL: {
+    lede: "Selection lets the program choose. In a coding test you will almost always need an if…else if chain.",
+    lesson: `${PRE('if (mark >= 80)\n    grade = \'A\';\nelse if (mark >= 65)      // only checked when mark < 80\n    grade = \'B\';\nelse if (mark >= 50)\n    grade = \'C\';\nelse\n    grade = \'F\';')}
+    <div class="lesson-grid">
+      <div><b>Relational</b><p><code>&lt; &lt;= &gt; &gt;= == !=</code>. Do not mix up <code>=</code> (assign) with <code>==</code> (compare).</p></div>
+      <div><b>Logical</b><p><code>&amp;&amp;</code> both true, <code>||</code> at least one true, <code>!</code> reverses. Range inside: <code>x &gt;= 1 &amp;&amp; x &lt;= 10</code>.</p></div>
+      <div><b>Common bugs</b><p>A <code>;</code> after <code>if (…)</code>; missing <code>{ }</code> around two statements; conditions in the wrong order.</p></div>
+    </div>`,
+    colQ: "Question",
+    items: [
+      {k:"mcq", q:"s1", code:'int x = 5;\nif (x = 0)\n    cout << "A";\nelse\n    cout << "B";', ask:"What is displayed?", opts:["A","B","Nothing","Compile error"], ans:1, why:"x = 0 assigns 0. The condition's value is 0, which is false."},
+      {k:"vars", q:"s2", code:'int m = 75;\nif (m >= 80) cout << "A";\nelse if (m >= 70) cout << "B";\nelse if (m >= 60) cout << "C";\nelse cout << "F";', vars:{"Output":"B"}, str:true},
+      {k:"mcq", q:"s3", code:'int m = 90;\nif (m >= 50) cout << "Pass";\nelse if (m >= 80) cout << "Excellent";', ask:"What is displayed?", opts:["Pass","Excellent","PassExcellent","Nothing"], ans:0, why:"90 >= 50 is true first, so the chain stops. Put the larger limit first."},
+      {k:"mcq", q:"s4", code:'int score = 20;\nif (score > 50);\n    cout << "Pass";', ask:"What is displayed?", opts:["Pass","Nothing","Compile error"], ans:0, why:"The ; ends the if with an empty body, so cout always runs."},
+      {k:"text", q:"s7", ask:"Write a condition that is true when age is from 13 to 19 (inclusive).", ph:"Type the condition", check: (v, s) => { s = s.replace(/[()]/g, ""); return ["age>=13&&age<=19","age<=19&&age>=13","13<=age&&age<=19","age>12&&age<20","age>=13&&19>=age"].includes(s); }, expect:"age >= 13 && age <= 19"},
+      {k:"text", q:"s8", ask:"Write a condition that is true when the char ch is 'y' or 'Y'.", ph:"Type the condition", check: (v, s) => { s = s.replace(/[()]/g, ""); return ["ch=='y'||ch=='Y'","ch=='Y'||ch=='y'","'y'==ch||'Y'==ch"].includes(s); }, expect:"ch == 'y' || ch == 'Y'"}
+    ]
+  },
+  SW: {
+    lede: "Use switch for menus and fixed choices; use ?: for a short two-way choice; use nested if when one decision depends on another.",
+    lesson: `${PRE('switch (choice)            // int, char or bool only\n{\n    case 1: result = a + b; break;\n    case 2: result = a - b; break;\n    default: cout << "Invalid";\n}\n\nbig = (a > b) ? a : b;     // condition ? value_if_true : value_if_false')}
+    <ul class="rules"><li>Without <code>break</code>, execution <b>falls through</b> into the next case.</li>
+    <li>A case label must be a constant (<code>case 'A':</code>), never a condition (<code>case x &gt; 5:</code>).</li>
+    <li>Dangling else: an <code>else</code> belongs to the <b>nearest</b> unmatched <code>if</code>. Use <code>{ }</code> to change that.</li></ul>`,
+    colQ: "Code",
+    items: [
+      {k:"vars", q:"w2", code:"int k = 1, t = 0;\nswitch (k)\n{\n    case 1: t += 1;\n    case 2: t += 10; break;\n    case 3: t += 100;\n}", vars:{t:"11"}, why:"case 1 has no break, so it falls through into case 2."},
+      {k:"vars", q:"w4", code:"int a = 8, b = 12;\nint big = (a > b) ? a : b;", vars:{big:"12"}},
+      {k:"mcq", q:"w5", code:'int x = 5, y = 20;\nif (x > 10)\n    if (y > 10)\n        cout << "A";\nelse\n    cout << "B";', ask:"What is displayed?", opts:["A","B","Nothing"], ans:2, why:"The else belongs to the inner if. x > 10 is false, so the whole inner if…else is skipped."},
+      {k:"text", q:"w6", code:"if (mark >= 50)\n    status = 'P';\nelse\n    status = 'F';", ask:"Rewrite as one statement using ?:", ph:"status = ...", check: (v, s) => ["status=(mark>=50)?'P':'F';","status=mark>=50?'P':'F';","status=(mark>=50?'P':'F');","status=(mark<50)?'F':'P';","status=mark<50?'F':'P';"].includes(s), expect:"status = (mark >= 50) ? 'P' : 'F';"}
+    ]
+  },
+  WH: {
+    lede: "A loop repeats statements. Every loop needs three things: a starting value, a condition, and an update that eventually makes the condition false.",
+    lesson: `${PRE('int i = 1, sum = 0;          // 1. initialise\nwhile (i <= 5)               // 2. test (checked BEFORE each round)\n{\n    sum += i;\n    i++;                     // 3. update, or the loop never ends\n}\n\ndo {                         // body runs at least once\n    cout << "Mark (0-100): ";\n    cin >> mark;\n} while (mark < 0 || mark > 100);   // ; after while is required')}
+    <div class="lesson-grid">
+      <div><b>Counter-controlled</b><p>Repeats a known number of times, e.g. read 5 marks.</p></div>
+      <div><b>Sentinel-controlled</b><p>Repeats until a special value, e.g. stop when the user enters <code>-1</code>.</p></div>
+      <div><b>Input validation</b><p><code>do…while</code> asks again until the input is valid.</p></div>
+    </div>`,
+    colQ: "Code",
+    items: [
+      {k:"vars", q:"h2", code:"int n = 10, count = 0;\nwhile (n > 1)\n{\n    n = n / 2;\n    count++;\n}", vars:{count:"3", n:"1"}, why:"n goes 10 → 5 → 2 → 1: three rounds."},
+      {k:"mcq", q:"h3", code:"int i = 0;\nwhile (i < 5)\n    cout << i;", ask:"What happens?", opts:["Infinite loop: 0 is printed forever","01234","Nothing","Compile error"], ans:0, why:"Without { } and without i++, i never changes."},
+      {k:"vars", q:"h4", code:'int x = 10;\ndo {\n    cout << x << " ";\n    x++;\n} while (x < 5);', vars:{"Output":"10"}, str:true, why:"A do…while body runs once before the condition is tested."},
+      {k:"mcq", q:"h6", code:"cin >> mark;\nwhile (mark != -1)\n{\n    total += mark;\n    cin >> mark;\n}", ask:"What is -1 called in this loop?", opts:["A sentinel value","A counter","An accumulator","A flag"], ans:0},
+      {k:"text", q:"h8", ask:"Write the loop condition that keeps asking while age is less than 0 or more than 120.", ph:"Type the condition", check: (v, s) => { s = s.replace(/[()]/g, ""); return ["age<0||age>120","age>120||age<0","0>age||age>120","age<0||120<age"].includes(s); }, expect:"age < 0 || age > 120"}
+    ]
+  },
+  FOR: {
+    lede: "Use for when you know how many times to repeat. Nested loops handle rows and columns, which you will need again for 2D arrays.",
+    lesson: `${PRE('for (int i = 1; i <= n; i++)     // initialise; test; update\n    total += i;\n\nfor (int r = 1; r <= 3; r++)     // outer: rows\n{\n    for (int c = 1; c <= r; c++) // inner: runs fully for each r\n        cout << "*";\n    cout << endl;\n}\n\nif (x == 0) break;       // leave the loop now\nif (x < 0) continue;     // skip to the next round')}`,
+    colQ: "Code",
+    items: [
+      {k:"vars", q:"f1", code:'for (int i = 1; i <= 10; i += 3)\n    cout << i << " ";', vars:{"Output":"1 4 7 10"}, str:true},
+      {k:"vars", q:"f4", code:"int c = 0;\nfor (int i = 0; i < 3; i++)\n    for (int j = 0; j < 4; j++)\n        c++;", vars:{c:"12"}, why:"The inner loop runs 4 times for each of the 3 outer rounds."},
+      {k:"vars", q:"f6", code:"for (int i = 1; i <= 10; i++)\n{\n    if (i == 4) break;\n    cout << i;\n}", vars:{"Output":"123"}, str:true},
+      {k:"vars", q:"f7", code:"for (int i = 1; i <= 5; i++)\n{\n    if (i % 2 == 0) continue;\n    cout << i;\n}", vars:{"Output":"135"}, str:true},
+      {k:"mcq", q:"f8", code:'for (int i = 0; i < 5; i++);\n    cout << "Hi";', ask:"How many times is Hi displayed?", opts:["Once","5 times","Never","Compile error"], ans:0, why:"The ; after the for header is an empty body; cout runs once after the loop."},
+      {k:"vars", q:"f9", code:'for (int i = ___; i <= ___; ___)\n    cout << i << " ";', ask:"Fill the blanks so the output is: 2 4 6 8 10", lbl:{s:"start", e:"end", u:"update"}, cmp:"code", vars:{s:"2", e:["10","11"], u:["i+=2","i=i+2"]}, why:"Start at 2, stop after 10, and go up by 2 each round."}
+    ]
+  }
+};
+
+/* ---- coding challenge ---- */
+const CODE = {
+  CH: {
+    title: "Marks analyser",
+    lede: "This is the kind of question you will get in the coding test: read a problem, then write the whole program. Use a loop, selection, counters and output formatting together.",
+    problem: `Write a program that asks how many students there are (<code>n</code>). Using a loop, read <code>n</code> marks. The program must:
+      <ul class="rules" style="margin-top:6px"><li>count how many students <b>passed</b> (mark 50 and above),</li>
+      <li>find the <b>highest</b> mark,</li>
+      <li>calculate the <b>average</b> and display it with <b>2 decimal places</b>,</li>
+      <li>display the <b>grade of the average</b> using if…else if: A (80 and above), B (65–79), C (50–64), F (below 50).</li></ul>
+      <span class="hint">Bonus (not auto-checked): reject marks outside 0–100 with a do…while loop.</span>`,
+    run: "Number of students: 4\nMark 1: 78\nMark 2: 45\nMark 3: 92\nMark 4: 60\nPassed: 3\nHighest: 92\nAverage: 68.75\nGrade: B",
+    tips: `<div class="lesson-grid">
+      <div><b>Plan first</b><p>Input: n, each mark. Process: total, count, highest. Output: passed, highest, average, grade.</p></div>
+      <div><b>Accumulator</b><p><code>total += mark;</code> inside the loop, with <code>total = 0</code> before it.</p></div>
+      <div><b>Highest</b><p>Start <code>highest</code> at <code>0</code> (or the first mark), then <code>if (mark &gt; highest) highest = mark;</code></p></div>
+      <div><b>Average</b><p>Avoid integer division: <code>average = (double)total / n;</code></p></div>
+    </div>`,
+    starter: "#include <iostream>\n#include <iomanip>\nusing namespace std;\n\nint main()\n{\n    \n    return 0;\n}",
+    checks: [
+      ["Includes <iostream> and <iomanip>", c => /#\s*include\s*<iostream>/.test(c) && /#\s*include\s*<iomanip>/.test(c)],
+      ["Has int main() and ends with return 0;", c => /\bint\s+main\s*\(\s*(void)?\s*\)/.test(c) && /return\s+0\s*;/.test(c)],
+      ["Reads input with cin >>", c => /\bcin\s*>>/.test(c)],
+      ["Uses a loop (for, while or do…while)", c => /\bfor\s*\(/.test(c) || /\bwhile\s*\(/.test(c)],
+      ["Adds each mark to a total (+= or total = total + …)", c => /\w+\s*\+=\s*\w+/.test(c) || /(\w+)\s*=\s*\1\s*\+\s*\w+/.test(c)],
+      ["Counts passes with a counter (++)", c => /\w+\s*\+\+|\+\+\s*\w+/.test(c) && />=\s*50\b|\b50\s*<=|>\s*49\b/.test(c)],
+      ["Compares to find the highest mark", c => /if\s*\(\s*\w+\s*>=?\s*\w+\s*\)/.test(c)],
+      ["Avoids integer division for the average", c => /\(\s*(double|float)\s*\)/.test(c) || /static_cast\s*<\s*(double|float)\s*>/.test(c) || /\b(double|float)\s+\w*(total|sum)\w*/i.test(c) || /\/\s*\(?\s*\w+\s*\*\s*1\.0/.test(c) || /\*\s*1\.0\s*\//.test(c)],
+      ["Uses an if…else if chain for the grade", c => /else\s+if\s*\(/.test(c)],
+      ["Shows 2 decimal places (fixed, setprecision(2))", c => /\bfixed\b/.test(c) && /setprecision\s*\(\s*2\s*\)/.test(c)]
+    ],
+    output: [
+      ["Output shows the pass count (3)", /pass\w*\D{0,15}\b3\b|\b3\s+(students?\s+)?(have\s+)?pass/i],
+      ["Output shows the highest mark (92)", /high\w*\D{0,15}92\b/i],
+      ["Output shows the average with 2 decimal places (68.75)", /68\.75\b/],
+      ["Output shows the grade of the average (B)", /grade\W{0,6}B\b/i]
+    ]
+  }
+};
+
+const EXIT = {
+  EXIT: {
+    topics: ["Identifiers, data types and constants", "Integer division, % and type casting", "cin, getline and setprecision", "if…else if chains and conditions", "switch, ?: and nested if", "while and do…while (validation, sentinel)", "for loops and nested loops", "Writing a full program from a problem"],
+    unsurePh: "e.g. when to use do…while instead of while"
+  }
+};
+const FCT = {};
+
+/* ================= LEARN FIRST: Part 1 (not marked, not sent) ================= */
+const KEYS = list => `<div class="keys">${list.map(([h, t]) => `<div><b>${h}</b>${t}</div>`).join("")}</div>`;
+const LEARN = {
+BE: {
+  idea: `<p>A C++ program is a set of instructions the computer runs <b>from top to bottom, starting inside <code>main()</code></b>. Before we can calculate anything, we must tell C++ what kind of data each variable holds.</p>
+  ${KEYS([
+    ["Structure", "<code>#include</code> lines, <code>using namespace std;</code>, then <code>int main() { … return 0; }</code>."],
+    ["Identifier", "A name you invent: starts with a letter or <code>_</code>, no spaces or symbols, not a keyword. <code>Total</code> and <code>total</code> are different."],
+    ["Data type", "<code>int</code> whole number · <code>double</code> decimal · <code>char</code> one character <code>'A'</code> · <code>bool</code> true/false · <code>string</code> text <code>\"Ali\"</code>."],
+    ["Constant", "<code>const double RATE = 0.06;</code> A value that must never change."]
+  ])}`,
+  walks: [{
+    title: "Program anatomy, line by line",
+    sub: "Press <b>Next step</b> or <b>Play</b>. Watch which line runs, what is stored in memory, and what appears on the console.",
+    code: '#include <iostream>\nusing namespace std;\n\nconst double RATE = 0.06;\n\nint main()\n{\n    int qty = 3;\n    double price = 4.50;\n    double total = qty * price * (1 + RATE);\n    cout << "Total: " << total;\n    return 0;\n}',
+    steps: [
+      {l:1, n:"<b>Preprocessor directive.</b> <code>#include &lt;iostream&gt;</code> brings in <code>cin</code> and <code>cout</code>. It is handled before the program is compiled."},
+      {l:2, n:"<code>using namespace std;</code> lets us write <code>cout</code> instead of <code>std::cout</code>."},
+      {l:4, v:{RATE:"0.06"}, n:"A <b>named constant</b>. Any attempt to change RATE later is a compile error."},
+      {l:6, n:"Execution always starts at <code>int main()</code>, wherever it is in the file."},
+      {l:8, v:{qty:"3"}, n:"<b>Declaration + initialisation:</b> reserve an <code>int</code> box called qty and put 3 in it."},
+      {l:9, v:{price:"4.5"}, n:"<code>double</code> because a price has decimals."},
+      {l:10, v:{total:"14.31"}, n:"The right side is calculated first: 3 × 4.50 × 1.06 = 14.31, then stored in total."},
+      {l:11, o:"Total: 14.31", n:"<code>cout</code> prints text in quotes exactly as written, then the <b>value</b> of total."},
+      {l:12, n:"<code>return 0;</code> ends main and reports that the program finished normally."}
+    ]
+  }],
+  tries: [
+    {k:"mcq", ask:"Which identifier is <b>invalid</b>?", opts:["mark_1","_count","my score","TOTAL"], ans:2, why:"It contains a space."},
+    {k:"mcq", ask:"Best data type to store whether a light is on?", opts:["int","double","char","bool"], ans:3, why:"Only two possible values: true or false."},
+    {k:"text", ask:"Declare an <code>int</code> variable named <code>age</code> with the value 19.", accept:"int age = 19;", cmp:"code", hint:"type name = value;  (remember the semicolon)"}
+  ]
+},
+OP: {
+  idea: `<p>An expression is calculated using <b>precedence</b> rules, not simply left to right. The two traps in every test: <b>integer division</b> and <b>modulus</b>.</p>
+  ${KEYS([
+    ["int / int", "Gives an int; the decimal part is <b>dropped</b>: <code>7 / 2</code> → <code>3</code>."],
+    ["% (modulus)", "The remainder: <code>7 % 2</code> → <code>1</code>. Only for integers."],
+    ["Keep decimals", "Make one side a double: <code>7 / 2.0</code> → 3.5, or cast: <code>(double)a / b</code>."],
+    ["Precedence", "<code>()</code> → <code>++ --</code> → <code>* / %</code> (left to right) → <code>+ -</code> → <code>= += -=</code>."]
+  ])}`,
+  walks: [{
+    title: "Evaluating an expression step by step",
+    code: "int r = 7 + 10 / 4 * 2 % 3;",
+    steps: [
+      {l:1, v:{"expression":"7 + 10 / 4 * 2 % 3"}, n:"Find the highest-precedence operators first: <code>*</code>, <code>/</code> and <code>%</code>. They share a level, so go <b>left to right</b>."},
+      {l:1, v:{"expression":"7 + 2 * 2 % 3"}, n:"<code>10 / 4</code> is integer division: 2.5 becomes <b>2</b>."},
+      {l:1, v:{"expression":"7 + 4 % 3"}, n:"Next from the left: <code>2 * 2</code> = 4."},
+      {l:1, v:{"expression":"7 + 1"}, n:"<code>4 % 3</code> = 1, the remainder of 4 ÷ 3."},
+      {l:1, v:{"expression":"8", r:"8"}, n:"Only now is <code>+</code> done: 7 + 1 = 8, stored in r."}
+    ]
+  }, {
+    title: "x++ versus ++x",
+    code: 'int x = 5;\nint a = x++;\nint b = ++x;\ncout << a << " " << b << " " << x;',
+    steps: [
+      {l:1, v:{x:"5"}},
+      {l:2, v:{a:"5", x:"6"}, n:"<b>Post-increment</b> <code>x++</code>: a receives the <b>old</b> value 5, then x becomes 6."},
+      {l:3, v:{x:"7", b:"7"}, n:"<b>Pre-increment</b> <code>++x</code>: x becomes 7 <b>first</b>, then b receives 7."},
+      {l:4, o:"5 7 7"}
+    ]
+  }],
+  tries: [
+    {k:"text", ask:"What is the value of <code>19 / 4</code>?", accept:"4", cmp:"num", why:"int / int drops the decimal."},
+    {k:"text", ask:"What is the value of <code>19 % 4</code>?", accept:"3", cmp:"num", why:"19 = 4 × 4 + 3."},
+    {k:"text", ask:"What is the value of <code>19 / 4.0</code>?", accept:"4.75", cmp:"num", why:"One side is a double, so the decimals are kept."}
+  ]
+},
+IO: {
+  idea: `<p>Everything the user types first goes into an <b>input buffer</b>. <code>cin &gt;&gt;</code> and <code>getline</code> take characters from that buffer in different ways, which is why mixing them needs care.</p>
+  ${KEYS([
+    ["cin >> x", "Skips spaces, reads one value, stops at the next space or Enter. The Enter is left in the buffer."],
+    ["getline(cin, s)", "Reads the whole line, spaces included, and removes the Enter."],
+    ["cin.ignore()", "Throws away one leftover character (the Enter) before a getline."],
+    ["Formatting", "<code>#include &lt;iomanip&gt;</code>: <code>fixed &lt;&lt; setprecision(2)</code> for 2 decimals, <code>setw(n)</code> for column width."]
+  ])}`,
+  walks: [{
+    title: "Why cin.ignore() is needed before getline",
+    sub: "Yellow text in the console is what the user types.",
+    code: 'int age;\nstring name;\ncout << "Age: ";\ncin >> age;\ncin.ignore();\ncout << "Name: ";\ngetline(cin, name);\ncout << name << " is " << age;',
+    steps: [
+      {l:[1,2], v:{age:"?", name:'""', "input buffer":"(empty)"}, n:"Declare the variables. age has no value yet; name is an empty string."},
+      {l:3, o:"Age: ", n:"Show a prompt so the user knows what to type."},
+      {l:4, i:"19", v:{"input buffer":"1 9 ⏎"}, n:"The user types 19 and presses Enter. All three keys wait in the input buffer."},
+      {l:4, v:{age:"19", "input buffer":"⏎"}, n:"<code>cin &gt;&gt; age</code> takes the digits and stops. The Enter key <b>⏎ is left behind</b>."},
+      {l:5, v:{"input buffer":"(empty)"}, n:"<code>cin.ignore()</code> throws away the leftover ⏎."},
+      {l:6, o:"Name: "},
+      {l:7, i:"Ali bin Abu", v:{"input buffer":"Ali bin Abu ⏎"}, n:"The user types a name with spaces."},
+      {l:7, v:{name:'"Ali bin Abu"', "input buffer":"(empty)"}, n:"<code>getline</code> reads up to the ⏎, spaces included. <b>Without line 5</b> it would have found the old ⏎ first and stored an empty name."},
+      {l:8, o:"Ali bin Abu is 19"}
+    ]
+  }, {
+    title: "Formatting numbers",
+    code: 'double price = 7.5;\ncout << price << endl;\ncout << fixed << setprecision(2);\ncout << price << endl;\ncout << setw(8) << price << endl;',
+    steps: [
+      {l:1, v:{price:"7.5"}},
+      {l:2, o:"7.5\n", n:"By default cout shows the shortest form: 7.5."},
+      {l:3, n:"<code>fixed</code> + <code>setprecision(2)</code>: from now on show exactly 2 decimal places. The setting <b>stays</b> until you change it."},
+      {l:4, o:"7.50\n"},
+      {l:5, o:"    7.50\n", n:"<code>setw(8)</code> right-aligns the next item in 8 columns: 4 spaces + <code>7.50</code>. setw affects only the <b>next</b> item."}
+    ]
+  }],
+  tries: [
+    {k:"mcq", ask:"What does <code>cout &lt;&lt; fixed &lt;&lt; setprecision(3) &lt;&lt; 2.5;</code> display?", opts:["2.5","2.500","2.50","3"], ans:1},
+    {k:"mcq", ask:"Which statement reads <code>Kuala Lumpur</code> completely into string city?", opts:["cin >> city;","getline(cin, city);","cin.ignore(city);"], ans:1},
+    {k:"text", ask:"Which header file must you include for <code>setw</code> and <code>setprecision</code>?", accept:["<iomanip>","iomanip","#include <iomanip>"], hint:"It starts with io…"}
+  ]
+},
+SEL: {
+  idea: `<p>Selection lets a program <b>choose</b> what to run. A condition is evaluated to <b>true</b> or <b>false</b>, and only the matching branch runs.</p>
+  ${KEYS([
+    ["if", "One-way: run the body only when the condition is true."],
+    ["if…else", "Two-way: exactly one of the two bodies runs."],
+    ["if…else if…else", "Multi-way: tested top to bottom; the <b>first</b> true branch runs and the rest are skipped."],
+    ["Conditions", "Relational <code>&lt; &lt;= &gt; &gt;= == !=</code>, joined with <code>&amp;&amp;</code> (both), <code>||</code> (either), <code>!</code> (not)."]
+  ])}`,
+  walks: [{
+    title: "Tracing an if…else if chain (mark = 72)",
+    code: "int mark;\nchar grade;\ncin >> mark;\nif (mark >= 80)\n    grade = 'A';\nelse if (mark >= 65)\n    grade = 'B';\nelse if (mark >= 50)\n    grade = 'C';\nelse\n    grade = 'F';\ncout << \"Grade \" << grade;",
+    steps: [
+      {l:3, i:"72", v:{mark:"72"}, n:"Read the mark."},
+      {l:4, n:"Test <code>72 &gt;= 80</code> → <b>false</b>. Skip line 5 and go to the next <code>else if</code>."},
+      {l:6, n:"Test <code>72 &gt;= 65</code> → <b>true</b>."},
+      {l:7, v:{grade:"B"}, n:"Run this branch. Lines 8–11 are <b>skipped</b>: in a chain only one branch ever runs."},
+      {l:12, o:"Grade B"}
+    ]
+  }, {
+    title: "Combining conditions with &&",
+    code: 'int m = 65, att = 70;\nif (m >= 50 && att >= 80)\n    cout << "Pass";\nelse\n    cout << "Barred";',
+    steps: [
+      {l:1, v:{m:"65", att:"70"}},
+      {l:2, v:{"m >= 50":"true"}, n:"Relational operators are evaluated before <code>&amp;&amp;</code>."},
+      {l:2, v:{"att >= 80":"false"}},
+      {l:2, v:{"true && false":"false"}, n:"<code>&amp;&amp;</code> is true only when <b>both</b> sides are true."},
+      {l:5, o:"Barred", n:"The condition is false, so the else branch runs."}
+    ]
+  }],
+  tries: [
+    {k:"mcq", ask:"In the grade chain above, what grade does <code>mark = 50</code> get?", opts:["A","B","C","F"], ans:2, why:"50 >= 80 false, 50 >= 65 false, 50 >= 50 true."},
+    {k:"text", ask:"Write a condition that is true when <code>x</code> is from 1 to 10 (inclusive).", accept:["x>=1&&x<=10","(x>=1)&&(x<=10)","x<=10&&x>=1","(x>=1&&x<=10)"], cmp:"code", hint:"Inside a range: use && with two comparisons."},
+    {k:"mcq", ask:"Is <code>true || false &amp;&amp; false</code> true or false?", opts:["true","false"], ans:0, why:"&& is done first: false && false = false, then true || false = true."}
+  ]
+},
+SW: {
+  idea: `<p>When one variable is compared with several <b>fixed values</b> (a menu choice, a grade letter), <code>switch</code> is cleaner than a long if…else if chain.</p>
+  ${KEYS([
+    ["switch (x)", "x must be <code>int</code>, <code>char</code> or <code>bool</code>, never double or string."],
+    ["case value:", "A constant only. Execution <b>starts</b> at the matching case."],
+    ["break", "Leaves the switch. Without it, execution <b>falls through</b> into the next case."],
+    ["?:", "<code>cond ? a : b</code> gives a if cond is true, otherwise b. A short if…else."]
+  ])}`,
+  walks: [{
+    title: "switch with a missing break (choice = 2)",
+    code: 'int choice = 2;\nswitch (choice)\n{\n    case 1: cout << "Add ";\n            break;\n    case 2: cout << "Edit ";\n    case 3: cout << "Delete ";\n            break;\n    default: cout << "Invalid";\n}',
+    steps: [
+      {l:1, v:{choice:"2"}},
+      {l:2, n:"switch compares choice with each case label in turn."},
+      {l:4, n:"<code>case 1</code> does not match 2: skip it."},
+      {l:6, o:"Edit ", n:"<code>case 2</code> matches: execution starts here."},
+      {l:7, o:"Delete ", n:"There is <b>no break</b> after case 2, so execution falls through into case 3!"},
+      {l:8, n:"<code>break</code> finally jumps out of the switch."},
+      {l:10, n:"Output: <b>Edit Delete</b>. Add <code>break;</code> after line 6 to show only Edit."}
+    ]
+  }, {
+    title: "The conditional operator ?:",
+    code: "int a = 8, b = 12;\nint big = (a > b) ? a : b;\ncout << big;",
+    steps: [
+      {l:1, v:{a:"8", b:"12"}},
+      {l:2, v:{"a > b":"false"}, n:"Evaluate the condition first."},
+      {l:2, v:{big:"12"}, n:"False → take the value after the colon: b."},
+      {l:3, o:"12"}
+    ]
+  }],
+  tries: [
+    {k:"mcq", ask:"Which is <b>not</b> a valid case label?", opts:["case 'A':","case 5:","case x > 5:"], ans:2, why:"A case label must be a constant value, not a condition."},
+    {k:"mcq", ask:"What does <code>cout &lt;&lt; (7 % 2 == 0 ? \"even\" : \"odd\");</code> display?", opts:["even","odd","1"], ans:1},
+    {k:"mcq", ask:"In the switch above, what is displayed when <code>choice = 5</code>?", opts:["Invalid","Add","Nothing"], ans:0, why:"No case matches, so default runs."}
+  ]
+},
+WH: {
+  idea: `<p>A loop repeats a block of statements. Every loop needs three parts, or it runs forever or never: <b>① initialise</b> a variable, <b>② test</b> a condition, <b>③ update</b> the variable.</p>
+  ${KEYS([
+    ["while", "Tests <b>before</b> each round. May run 0 times."],
+    ["do…while", "Runs the body <b>first</b>, tests after. Runs at least once. Ideal for input validation."],
+    ["Counter-controlled", "Known number of rounds: <code>i = 1 … n</code>."],
+    ["Sentinel-controlled", "Stop on a special value, e.g. <code>-1</code>."]
+  ])}`,
+  walks: [{
+    title: "while loop: sum of 1 to 3",
+    code: 'int i = 1, sum = 0;\nwhile (i <= 3)\n{\n    sum = sum + i;\n    i++;\n}\ncout << "Sum = " << sum;',
+    steps: [
+      {l:1, v:{i:"1", sum:"0"}, n:"① Initialise the counter and the accumulator."},
+      {l:2, n:"② Test <code>1 &lt;= 3</code> → true. Enter the body."},
+      {l:4, v:{sum:"1"}},
+      {l:5, v:{i:"2"}, n:"③ Update the counter."},
+      {l:2, n:"Back to the test: <code>2 &lt;= 3</code> → true."},
+      {l:4, v:{sum:"3"}},
+      {l:5, v:{i:"3"}},
+      {l:2, n:"<code>3 &lt;= 3</code> → true."},
+      {l:4, v:{sum:"6"}},
+      {l:5, v:{i:"4"}},
+      {l:2, n:"<code>4 &lt;= 3</code> → <b>false</b>. Leave the loop and continue after the }."},
+      {l:7, o:"Sum = 6"}
+    ]
+  }, {
+    title: "do…while: re-ask until the input is valid",
+    code: 'int mark;\ndo {\n    cout << "Mark (0-100): ";\n    cin >> mark;\n} while (mark < 0 || mark > 100);\ncout << "Accepted " << mark;',
+    steps: [
+      {l:2, n:"A do…while enters the body <b>without testing first</b>."},
+      {l:3, o:"Mark (0-100): "},
+      {l:4, i:"150", v:{mark:"150"}},
+      {l:5, n:"<code>150 &gt; 100</code> → the condition is true, which means the input is <b>invalid</b>: go round again."},
+      {l:3, o:"Mark (0-100): "},
+      {l:4, i:"85", v:{mark:"85"}},
+      {l:5, n:"85 is in range, so the condition is false: leave the loop."},
+      {l:6, o:"Accepted 85"}
+    ]
+  }],
+  tries: [
+    {k:"mcq", ask:"How many times does the body run?", code:"int k = 10;\nwhile (k < 5)\n    k++;", opts:["0","1","5"], ans:0, why:"The test is false at the start, so the body never runs."},
+    {k:"mcq", ask:"Same idea with do…while. How many times does the body run?", code:"int k = 10;\ndo {\n    k++;\n} while (k < 5);", opts:["0","1","5"], ans:1, why:"do…while always runs once before testing."},
+    {k:"text", ask:"Write the loop condition: keep going while <code>x</code> is not -1.", accept:["x!=-1","(x!=-1)"], cmp:"code"}
+  ]
+},
+FOR: {
+  idea: `<p><code>for</code> puts the three loop parts in one line. Use it when you know how many times to repeat. A loop inside a loop (<b>nested loop</b>) handles rows × columns.</p>
+  ${PRE("for ( ① initialise ; ② test ; ③ update )\n    body;\n\nOrder:  ① → ② → body → ③ → ② → body → ③ → … until ② is false")}`,
+  walks: [{
+    title: "The order a for loop runs in",
+    code: 'for (int i = 1; i <= 3; i++)\n{\n    cout << i * 10 << " ";\n}\ncout << "done";',
+    steps: [
+      {l:1, v:{i:"1"}, n:"① <code>int i = 1</code> runs <b>once only</b>."},
+      {l:1, n:"② Test <code>1 &lt;= 3</code> → true."},
+      {l:3, o:"10 "},
+      {l:1, v:{i:"2"}, n:"③ <code>i++</code> → 2, then ② test again: true."},
+      {l:3, o:"20 "},
+      {l:1, v:{i:"3"}, n:"<code>i++</code> → 3. <code>3 &lt;= 3</code> → true."},
+      {l:3, o:"30 "},
+      {l:1, v:{i:"4"}, n:"<code>i++</code> → 4. <code>4 &lt;= 3</code> → <b>false</b>: stop."},
+      {l:5, o:"done"}
+    ]
+  }, {
+    title: "Nested loops: rows and columns",
+    code: 'for (int r = 1; r <= 2; r++)\n{\n    for (int c = 1; c <= 3; c++)\n        cout << r * c << " ";\n    cout << endl;\n}',
+    steps: [
+      {l:1, v:{r:"1"}, n:"Outer loop: row 1."},
+      {l:[3,4], v:{c:"1"}, o:"1 ", n:"The inner loop runs <b>completely</b> for each value of r."},
+      {l:[3,4], v:{c:"2"}, o:"2 "},
+      {l:[3,4], v:{c:"3"}, o:"3 "},
+      {l:5, o:"\n", n:"c becomes 4, the inner test fails. New line."},
+      {l:1, v:{r:"2"}, n:"Outer loop: row 2. The inner loop starts again from c = 1."},
+      {l:[3,4], v:{c:"1"}, o:"2 "},
+      {l:[3,4], v:{c:"2"}, o:"4 "},
+      {l:[3,4], v:{c:"3"}, o:"6 "},
+      {l:5, o:"\n", n:"The inner body ran 2 × 3 = 6 times in total."}
+    ]
+  }],
+  tries: [
+    {k:"mcq", ask:"How many times does <code>for (int i = 0; i &lt; 4; i++)</code> run its body?", opts:["3","4","5"], ans:1, why:"i takes 0, 1, 2, 3."},
+    {k:"text", ask:"What is the output?", code:"for (int i = 5; i >= 1; i -= 2)\n    cout << i;", accept:"531", why:"i takes 5, 3, 1."},
+    {k:"mcq", ask:"Which statement skips the rest of the current round and goes to the next round?", opts:["break","continue","return"], ans:1}
+  ]
+},
+CH: {
+  idea: `<p>In the coding test you start from a <b>problem statement</b>, not from code. Use the same steps every time, and test with the sample input before you submit.</p>
+  ${KEYS([
+    ["1 · IPO", "List the Input, Process and Output from the problem."],
+    ["2 · Variables", "One per data item. Counters and totals start at 0."],
+    ["3 · Structures", "\"n items\" → for loop. \"until\" → while. \"if/only/above\" → if. Categories → if…else if."],
+    ["4 · Output", "Display after the loop, in the required format."]
+  ])}`,
+  walks: [{
+    label: "WORKED EXAMPLE",
+    title: "From problem to code",
+    sub: "<b>Problem:</b> read the prices of n items. Display the total in RM with 2 decimal places, and how many items cost more than RM50.",
+    code: '#include <iostream>\n#include <iomanip>\nusing namespace std;\n\nint main()\n{\n    int n, countHigh = 0;\n    double price, total = 0;\n    cout << "How many items? ";\n    cin >> n;\n    for (int i = 1; i <= n; i++)\n    {\n        cout << "Price " << i << ": ";\n        cin >> price;\n        total += price;\n        if (price > 50)\n            countHigh++;\n    }\n    cout << fixed << setprecision(2);\n    cout << "Total: RM" << total << endl;\n    cout << "Above RM50: " << countHigh << endl;\n    return 0;\n}',
+    steps: [
+      {l:[], n:"<b>Step 1 · IPO.</b> Input: n, each price. Process: add the prices; count prices above 50. Output: total (2 decimals) and the count."},
+      {l:[7,8], n:"<b>Step 2 · Variables.</b> <code>int</code> for counts, <code>double</code> for money. The accumulator <code>total</code> and the counter <code>countHigh</code> start at 0."},
+      {l:[9,10], n:"<b>Step 3 · Read what controls the loop.</b> We must know n before repeating n times."},
+      {l:[11,12,18], n:"<b>Step 4 · Choose the loop.</b> \"n items\" is a known number of rounds, so use a <code>for</code> loop."},
+      {l:[13,14], n:"<b>Step 5 · Inside the loop, read one item.</b>"},
+      {l:15, n:"<b>Step 6 · Accumulate.</b> <code>total += price;</code> adds each price to the running total."},
+      {l:[16,17], n:"<b>Step 7 · Count with if.</b> Only prices above 50 increase the counter."},
+      {l:[19,20,21], n:"<b>Step 8 · Output after the loop</b>, so it prints once, formatted to 2 decimal places."}
+    ]
+  }, {
+    label: "TEST IT WITH SAMPLE INPUT",
+    title: "Run: 3 items costing 20, 75.5 and 60",
+    code: '#include <iostream>\n#include <iomanip>\nusing namespace std;\n\nint main()\n{\n    int n, countHigh = 0;\n    double price, total = 0;\n    cout << "How many items? ";\n    cin >> n;\n    for (int i = 1; i <= n; i++)\n    {\n        cout << "Price " << i << ": ";\n        cin >> price;\n        total += price;\n        if (price > 50)\n            countHigh++;\n    }\n    cout << fixed << setprecision(2);\n    cout << "Total: RM" << total << endl;\n    cout << "Above RM50: " << countHigh << endl;\n    return 0;\n}',
+    steps: [
+      {l:[7,8], v:{n:"?", countHigh:"0", total:"0"}},
+      {l:[9,10], o:"How many items? ", i:"3", v:{n:"3"}},
+      {l:[13,14], o:"Price 1: ", i:"20", v:{i:"1", price:"20"}},
+      {l:[15,16], v:{total:"20"}, n:"<code>20 &gt; 50</code> is false: no count."},
+      {l:[13,14], o:"Price 2: ", i:"75.5", v:{i:"2", price:"75.5"}},
+      {l:[15,16,17], v:{total:"95.5", countHigh:"1"}, n:"<code>75.5 &gt; 50</code> → countHigh becomes 1."},
+      {l:[13,14], o:"Price 3: ", i:"60", v:{i:"3", price:"60"}},
+      {l:[15,16,17], v:{total:"155.5", countHigh:"2"}},
+      {l:[19,20,21], o:"Total: RM155.50\nAbove RM50: 2\n", n:"i becomes 4 and the loop ends. Compare your output with the expected sample output <b>before</b> you submit."}
+    ]
+  }],
+  tries: [
+    {k:"mcq", ask:"A problem says <i>\"keep reading marks until the user enters 0\"</i>. Which loop fits best?", opts:["for (int i = 0; i < 10; i++)","while (mark != 0) with a read before and inside the loop","switch"], ans:1, why:"An unknown number of rounds ending on a special value is a sentinel-controlled while loop."},
+    {k:"mcq", ask:"Where should the statement that displays the final average go?", opts:["Inside the loop","After the loop","Before the loop"], ans:1, why:"Inside the loop it would print once per round."},
+    {k:"mcq", ask:"<code>total</code> and <code>n</code> are both int. Which gives the correct average 68.75?", opts:["total / n","(double)total / n","(double)(total / n)"], ans:1, why:"Cast before dividing. (double)(total / n) still does integer division first."}
+  ]
+}
+};
+
+</script>
+<script>initGate();</script>
+</body></html>
